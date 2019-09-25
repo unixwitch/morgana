@@ -52,7 +52,13 @@ namespace Morgana {
             if (sr.Error != null) {
                 var bits = command.Split(" ");
 
-                ModuleInfo minfo = Commands.Modules.First(m => m.Name == bits[0]);
+                ModuleInfo minfo;
+                try {
+                    minfo = Commands.Modules.First(m => m.Name == bits[0]);
+                } catch (InvalidOperationException) {
+                    await ReplyAsync("I don't recognise that command.");
+                    return;
+                }
                 var matched = minfo.Name;
 
                 for (int i = 1; i < bits.Length; i++) {

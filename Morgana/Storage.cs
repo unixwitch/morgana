@@ -25,6 +25,11 @@ namespace Morgana {
         public HashSet<ulong> Admins { get; set; } = new HashSet<ulong>();
         public HashSet<ulong> ManagedRoles { get; set; } = new HashSet<ulong>();
         public string CommandPrefix { get; set; }
+        public HashSet<string> Badwords { get; set; } = new HashSet<string>();
+        public bool BadwordsEnabled { get; set; } = true;
+        public string BadwordsMessage { get; set; }
+        public bool AuditEnabled { get; set; } = false;
+        public ulong AuditChannel { get; set; } = 0;
 
         public bool AdminAdd(IGuildUser user) {
             return Admins.Add(user.Id);
@@ -48,6 +53,18 @@ namespace Morgana {
 
         public bool IsManagedrole(IRole role) {
             return ManagedRoles.Contains(role.Id);
+        }
+
+        public bool BadwordAdd(string word) {
+            return Badwords.Add(word);
+        }
+
+        public bool BadwordRemove(string word) {
+            return Badwords.Remove(word);
+        }
+
+        public bool IsBadword(string word) {
+            return Badwords.Contains(word);
         }
     }
 

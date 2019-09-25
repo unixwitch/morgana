@@ -33,20 +33,27 @@ namespace Morgana {
         }
 
         public async Task Run() {
+            var clientConfig = new DiscordSocketConfig {
+                MessageCacheSize = 1024
+            };
+            var client = new DiscordSocketClient(clientConfig);
+            client.Log += Log;
+
             using (var services =
                 new ServiceCollection()
-                    .AddSingleton<DiscordSocketClient>()
+                    .AddSingleton<DiscordSocketClient>(client)
                     .AddSingleton<Storage>()
                     .AddSingleton<CommandService>()
                     .AddSingleton<CommandHandler>()
+                    .AddSingleton<BadwordsFilter>()
+                    .AddSingleton<AuditLogger>()
                     .AddSingleton(_config)
                     .BuildServiceProvider()) {
 
-                var client = services.GetRequiredService<DiscordSocketClient>();
-                client.Log += Log;
-
                 services.GetRequiredService<CommandService>().Log += Log;
                 await services.GetRequiredService<CommandHandler>().InitializeAsync();
+                await services.GetRequiredService<BadwordsFilter>().InitialiseAsync();
+                await services.GetRequiredService<AuditLogger>().InitialiseAsync();
 
                 await client.LoginAsync(TokenType.Bot, _config.Token);
                 await client.StartAsync();
