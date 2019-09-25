@@ -25,11 +25,22 @@ namespace Morgana {
         public HashSet<ulong> Admins { get; set; } = new HashSet<ulong>();
         public HashSet<ulong> ManagedRoles { get; set; } = new HashSet<ulong>();
         public string CommandPrefix { get; set; }
+
         public HashSet<string> Badwords { get; set; } = new HashSet<string>();
         public bool BadwordsEnabled { get; set; } = true;
         public string BadwordsMessage { get; set; }
+
         public bool AuditEnabled { get; set; } = false;
         public ulong AuditChannel { get; set; } = 0;
+
+        public ulong PinFrom { get; set; } = 0;
+        public ulong PinTo { get; set; } = 0;
+        public bool DoPins { get; set; } = false;
+
+#if false
+        public ulong PracticeChannel { get; set; } = 0;
+        public string PracticeMessage { get; set; }
+#endif
 
         public bool AdminAdd(IGuildUser user) {
             return Admins.Add(user.Id);

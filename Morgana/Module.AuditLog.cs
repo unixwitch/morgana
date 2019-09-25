@@ -30,7 +30,7 @@ namespace Morgana {
         [Command("channel")]
         [Summary("Set the audit log channel")]
         [RequireContext(ContextType.Guild)]
-        public async Task Channel(IChannel channel) {
+        public async Task Channel(ITextChannel channel) {
             var guild = Context.Guild;
             var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
@@ -252,6 +252,9 @@ namespace Morgana {
 
             var channel = beforeMessage.Channel as SocketGuildChannel;
             if (channel == null)
+                return;
+
+            if (beforeMessage.Content == after.Content)
                 return;
 
             var guild = channel.Guild;

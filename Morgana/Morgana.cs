@@ -47,6 +47,7 @@ namespace Morgana {
                     .AddSingleton<CommandHandler>()
                     .AddSingleton<BadwordsFilter>()
                     .AddSingleton<AuditLogger>()
+                    .AddSingleton<PicMover>()
                     .AddSingleton(_config)
                     .BuildServiceProvider()) {
 
@@ -54,6 +55,7 @@ namespace Morgana {
                 await services.GetRequiredService<CommandHandler>().InitializeAsync();
                 await services.GetRequiredService<BadwordsFilter>().InitialiseAsync();
                 await services.GetRequiredService<AuditLogger>().InitialiseAsync();
+                await services.GetRequiredService<PicMover>().InitialiseAsync();
 
                 await client.LoginAsync(TokenType.Bot, _config.Token);
                 await client.StartAsync();
