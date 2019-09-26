@@ -138,7 +138,38 @@ namespace Morgana {
             Client.UserJoined += UserJoinedAsync;
             Client.UserLeft += UserLeftAsync;
             Client.UserBanned += UserBannedAsync;
+            Client.GuildMemberUpdated += GuildMemberUpdatedAsync;
             return Task.CompletedTask;
+        }
+
+        public async Task GuildMemberUpdatedAsync(SocketGuildUser before, SocketGuildUser after) {
+            var guild = before.Guild;
+            var gcfg = Vars.GetGuild(guild);
+
+            if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
+                return;
+
+            var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
+
+            if (before.Nickname != after.Nickname) {
+                await auditchannel.SendMessageAsync(embed:
+                    new EmbedBuilder()
+                        .WithAuthor(after)
+                        .WithTitle("User nickname changed")
+                        .AddField("**Old nickname**", before.Nickname ?? before.Username)
+                        .AddField("**New nickname**", after.Nickname ?? after.Username)
+                        .Build());
+            }
+
+            if (before.Roles.Select(r => r.Id).OrderBy(id => id) != after.Roles.Select(r => r.Id).OrderBy(id => id)) {
+                await auditchannel.SendMessageAsync(embed:
+                    new EmbedBuilder()
+                        .WithAuthor(after)
+                        .WithTitle("User roles changed")
+                        .AddField("**Old role list**", String.Join(", ", before.Roles.Select(r => $"`{r.Name}`")))
+                        .AddField("**New role list**", String.Join(", ", after.Roles.Select(r => $"`{r.Name}`")))
+                        .Build());
+            }
         }
 
         public async Task UserJoinedAsync(SocketGuildUser user) {
