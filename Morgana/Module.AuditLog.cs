@@ -161,7 +161,7 @@ namespace Morgana {
                         .Build());
             }
 
-            if (before.Roles.Select(r => r.Id).OrderBy(id => id) != after.Roles.Select(r => r.Id).OrderBy(id => id)) {
+            if (!before.Roles.Select(r => r.Id).OrderBy(id => id).SequenceEqual(after.Roles.Select(r => r.Id).OrderBy(id => id))) {
                 await auditchannel.SendMessageAsync(embed:
                     new EmbedBuilder()
                         .WithAuthor(after)
