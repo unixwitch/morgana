@@ -98,13 +98,19 @@ namespace Morgana {
                 $"**{guild.ToString()}**",
                 $"Since {created}.  That's over {ageDays} days ago!");
 
+#if false
             await guild.DownloadUsersAsync();
             int totalUsers = guild.Users.Count();
             int onlineUsers = guild.Users.Where(u => u.Status == UserStatus.Online).Count();
+#endif
+            int totalUsers = guild.MemberCount;
 
             var embed = builder
                 .AddField("**Region**", guild.VoiceRegionId, true)
+#if false
                 .AddField("**Users**", $"{onlineUsers}/{totalUsers}", true)
+#endif
+                .AddField("**Users**", $"{totalUsers}", true)
                 .AddField("**Text channels**", guild.TextChannels.Count(), true)
                 .AddField("**Voice channels**", guild.VoiceChannels.Count(), true)
                 .AddField("**Roles**", guild.Roles.Count(), true)
