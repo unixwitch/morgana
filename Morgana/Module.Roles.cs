@@ -40,6 +40,11 @@ namespace Morgana {
             var gcfg = Vars.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 
+            if (target != null && !gcfg.IsAdmin(guilduser)) {
+                await ReplyAsync("Sorry, only admins can add roles to other users.");
+                return;
+            }
+
             target ??= guild.GetUser(Context.User.Id);
 
             if (target == null) {
@@ -89,6 +94,13 @@ namespace Morgana {
 
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(Context.Guild);
+            var guilduser = Context.Guild.GetUser(Context.User.Id);
+
+            if (target != null && !gcfg.IsAdmin(guilduser)) {
+                await ReplyAsync("Sorry, only admins can add roles to other users.");
+                return;
+            }
+
             target ??= guild.GetUser(Context.User.Id);
 
             if (target == null) {
@@ -206,7 +218,7 @@ namespace Morgana {
             }
 
             var list = String.Join(", ", strings);
-            await ReplyAsync($"I can manage these roles: {list}");
+            await ReplyAsync($"I can manage these roles: {list}.");
         }
     }
 }
