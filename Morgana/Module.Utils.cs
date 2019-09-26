@@ -32,7 +32,7 @@ namespace Morgana {
         [Command("say")]
         [Summary("Make me say something")]
         [RequireContext(ContextType.Guild)]
-        public async Task Say([Summary("The channel I should talk in")] ITextChannel channel, 
+        public async Task Say([Summary("The channel I should talk in")] ITextChannel channel,
             [Summary("The words I should say")] [Remainder] string words) {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
@@ -50,7 +50,7 @@ namespace Morgana {
         [Summary("Hug a user")]
         [RequireContext(ContextType.Guild)]
         public async Task Hug(
-            [Summary("The user to hug")] IGuildUser user, 
+            [Summary("The user to hug")] IGuildUser user,
             [Summary("The intensity of the hug (1 to 10)")] int intensity = 1) {
             string msg = "";
             string name = user.Mention;
@@ -67,6 +67,48 @@ namespace Morgana {
                 msg = $"(づ￣ ³￣)づ{name} ⊂(´・ω・｀⊂)";
 
             await ReplyAsync(msg);
+        }
+
+        [Command("choose")]
+        [Summary("Choose one of a list of options")]
+        public async Task Choose([Summary("The options to choose from")] params string[] options) {
+            string opt = options[new Random().Next(0, options.Length)];
+            await ReplyAsync("`" + Format.Sanitize(opt) + "`");
+        }
+
+        static Dictionary<char, char> flips;
+
+        static UtilsModule() {
+            flips = new Dictionary<char, char>();
+
+            string from = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            string to = "ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇnʌʍxʎz∀qƆpƎℲפHIſʞ˥WNOԀQᴚS┴∩ΛMX⅄Z";
+            for (int i = 0; i < from.Length; ++i)
+                flips[from[i]] = to[i];
+        }
+
+        static string Flip(string s) {
+            var t = new StringBuilder(s.Length);
+            foreach (char c in s) {
+                char to;
+                if (flips.TryGetValue(c, out to))
+                    t.Append(to);
+                else
+                    t.Append(c);
+            }
+            return t.ToString();
+        }
+
+        [Command("flip")]
+        [Summary("Flip a coin... or a user.  Defaults to coin.")]
+        public async Task Flip([Summary("The user to flip")] IGuildUser user = null) {
+            if (user == null) {
+                await ReplyAsync(new Random().Next(0, 2) == 0 ? "HEADS!" : "TAILS!");
+                return;
+            }
+
+            var flipped = Flip(user.Nickname ?? user.Username);
+            await ReplyAsync("(╯°□°）╯︵ " + flipped);
         }
 
         [Command("userinfo")]
@@ -146,13 +188,15 @@ namespace Morgana {
             int onlineUsers = guild.Users.Where(u => u.Status == UserStatus.Online).Count();
 #endif
             int totalUsers = guild.MemberCount;
+            int onlineUsers = guild.Users.Where(u => u.Status == UserStatus.Online).Count();
 
             var embed = builder
                 .AddField("**Region**", guild.VoiceRegionId, true)
-#if false
+#if true
                 .AddField("**Users**", $"{onlineUsers}/{totalUsers}", true)
-#endif
+#else
                 .AddField("**Users**", $"{totalUsers}", true)
+#endif
                 .AddField("**Text channels**", guild.TextChannels.Count(), true)
                 .AddField("**Voice channels**", guild.VoiceChannels.Count(), true)
                 .AddField("**Roles**", guild.Roles.Count(), true)
