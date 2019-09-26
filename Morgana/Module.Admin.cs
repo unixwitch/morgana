@@ -63,9 +63,16 @@ namespace Morgana {
                 var gcfg = Vars.GetGuild(guild);
                 var guilduser = Context.Guild.GetUser(Context.User.Id);
 
-                if (gcfg.Admins.Count() > 0 && !gcfg.IsAdmin(guilduser)) {
-                    await ReplyAsync("Sorry, only admins can use this command.");
-                    return;
+                if (gcfg.Admins.Count() == 0) {
+                    if (!guilduser.GuildPermissions.Administrator) {
+                        await ReplyAsync("No admins have been defined yet, so only the server owner can use this command.");
+                        return;
+                    }
+                } else {
+                    if (!gcfg.IsAdmin(guilduser)) {
+                        await ReplyAsync("Sorry, only admins can use this command.");
+                        return;
+                    }
                 }
 
                 if (target == null) {
