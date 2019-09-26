@@ -29,6 +29,23 @@ namespace Morgana {
         [Summary("Find out what the current time is")]
         public Task Time() => ReplyAsync($"The current time in UTC is {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")}");
 
+        [Command("say")]
+        [Summary("Make me say something")]
+        [RequireContext(ContextType.Guild)]
+        public async Task Say([Summary("The channel I should talk in")] ITextChannel channel, 
+            [Summary("The words I should say")] [Remainder] string words) {
+            var guild = Context.Guild;
+            var gcfg = Vars.GetGuild(guild);
+            var guilduser = Context.Guild.GetUser(Context.User.Id);
+
+            if (!gcfg.IsAdmin(guilduser)) {
+                await ReplyAsync("Sorry, only admins can use this command.");
+                return;
+            }
+
+            await channel.SendMessageAsync(words);
+        }
+
         [Command("userinfo")]
         [Summary("Display some information about you")]
         [RequireContext(ContextType.Guild)]
