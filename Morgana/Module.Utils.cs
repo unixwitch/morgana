@@ -69,7 +69,7 @@ namespace Morgana {
                 new EmbedBuilder()
                     .WithThumbnailUrl(user.GetAvatarUrl());
 //                    .WithAuthor(user);
-            builder.AddField($"**{user.ToString()}**", user.Activity == null ? "" : "Playing " + user.Activity.Name);
+            builder.AddField($"**{user.ToString()}**", user.Activity == null ? "" : ("Playing " + user.Activity.Name));
 
             var embed = builder
                 .AddField(discordField)
