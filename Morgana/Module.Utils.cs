@@ -19,6 +19,8 @@ using System.Linq;
 
 namespace Morgana {
     public class UtilsModule : ModuleBase<SocketCommandContext> {
+        public Storage Vars { get; set; }
+
         [Command("ping")]
         [Summary("Check whether I'm still alive")]
         public Task Ping() => ReplyAsync("I LIVE!");
@@ -121,5 +123,20 @@ namespace Morgana {
             await ReplyAsync(embed: embed);
         }
 
+        [Command("die")]
+        [Summary("Cause the bot to immediately exit")]
+        [RequireContext(ContextType.Guild)]
+        public async Task Die() {
+            var guild = Context.Guild;
+            var gcfg = Vars.GetGuild(guild);
+            var guilduser = Context.Guild.GetUser(Context.User.Id);
+
+            if (gcfg.Admins.Count() > 0 && !gcfg.IsAdmin(guilduser)) {
+                await ReplyAsync("Sorry, only admins can use this command.");
+                return;
+            }
+
+            Environment.Exit(0);
+        }
     }
 }
