@@ -46,6 +46,29 @@ namespace Morgana {
             await channel.SendMessageAsync(words);
         }
 
+        [Command("hug")]
+        [Summary("Hug a user")]
+        [RequireContext(ContextType.Guild)]
+        public async Task Hug(
+            [Summary("The user to hug")] IGuildUser user, 
+            [Summary("The intensity of the hug (1 to 10)")] int intensity = 1) {
+            string msg = "";
+            string name = user.Mention;
+
+            if (intensity <= 0)
+                msg = "(っ˘̩╭╮˘̩)っ" + name;
+            else if (intensity <= 3)
+                msg = "(っ´▽｀)っ" + name;
+            else if (intensity <= 6)
+                msg = "╰(*´︶`*)╯" + name;
+            else if (intensity <= 9)
+                msg = "(つ≧▽≦)つ" + name;
+            else if (intensity >= 10)
+                msg = $"(づ￣ ³￣)づ{name} ⊂(´・ω・｀⊂)";
+
+            await ReplyAsync(msg);
+        }
+
         [Command("userinfo")]
         [Summary("Display some information about you")]
         [RequireContext(ContextType.Guild)]
