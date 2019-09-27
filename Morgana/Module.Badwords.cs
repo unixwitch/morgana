@@ -190,6 +190,8 @@ namespace Morgana {
 
         public async Task<bool> FilterMessageAsync(SocketMessage p) {
             var message = p as SocketUserMessage;
+            var guilduser = message.Author;
+
             if (message == null)
                 return false;
 
@@ -206,6 +208,9 @@ namespace Morgana {
 
             var bw = gcfg.CommandPrefix + "badwords";
             if (message.Content.StartsWith(bw))
+                return false;
+
+            if (gcfg.IsAdmin(guilduser.Id))
                 return false;
 
             var re = new Regex(@"\b");
