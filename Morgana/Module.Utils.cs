@@ -81,17 +81,19 @@ namespace Morgana {
         static UtilsModule() {
             flips = new Dictionary<char, char>();
 
-            string from = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            string to = "ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇnʌʍxʎz∀qƆpƎℲפHIſʞ˥WNOԀQᴚS┴∩ΛMX⅄Z";
+            string from_ = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            string to_   = "ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇnʌʍxʎz∀ઘƆ◖ƎℲפHIſ⋊˥WNOԀQᴚS⊥∩ΛMX⅄Z";
+            string from = from_ + to_;
+            string to = to_ + from_;
+
             for (int i = 0; i < from.Length; ++i)
                 flips[from[i]] = to[i];
         }
 
-        static string Flip(string s) {
+        static string FlipString(string s) {
             var t = new StringBuilder(s.Length);
             foreach (char c in s) {
-                char to;
-                if (flips.TryGetValue(c, out to))
+                if (flips.TryGetValue(c, out char to))
                     t.Append(to);
                 else
                     t.Append(c);
@@ -101,14 +103,51 @@ namespace Morgana {
 
         [Command("flip", RunMode = RunMode.Async)]
         [Summary("Flip a coin... or a user.  Defaults to coin.")]
-        public async Task Flip([Summary("The user to flip")] IGuildUser user = null) {
-            if (user == null) {
+        [RequireContext(ContextType.Guild)]
+        public async Task Flip([Summary("The text or user to flip")][Remainder] string text = null) {
+            if (text == null) {
                 await ReplyAsync(new Random().Next(0, 2) == 0 ? "HEADS!" : "TAILS!");
                 return;
             }
 
-            var flipped = Flip(user.Nickname ?? user.Username);
-            await ReplyAsync("(╯°□°）╯︵ " + flipped);
+            string ftext = text;
+
+            try {
+                var userid = MentionUtils.ParseUser(text);
+                IGuildUser user = Context.Guild.GetUser(userid);
+                if (user != null) {
+                    if (user.Id == Context.Client.CurrentUser.Id)
+                        user = Context.User as IGuildUser;
+                    ftext = user.Nickname ?? user.Username;
+                }
+            } catch (ArgumentException) {}
+
+            var flipped = FlipString(ftext);
+            char[] flipa = flipped.ToArray();
+            Array.Reverse(flipa);
+            await ReplyAsync("(╯°□°）╯︵ " + new string(flipa));
+        }
+
+        [Command("np", RunMode = RunMode.Async)]
+        [Summary("Show your current playing music")]
+        [RequireContext(ContextType.Guild)]
+        public async Task Np() {
+            var target = Context.User as IGuildUser;
+            var username = Format.Sanitize(target.Nickname ?? target.Username);
+
+            switch (target.Activity) {
+                case SpotifyGame spotify:
+                    var artists = Format.Sanitize(String.Join(", ", spotify.Artists));
+                    var track = Format.Sanitize(spotify.TrackTitle);
+                    string activity = $"{artists} - {track} (on {spotify.AlbumTitle})";
+
+                    await ReplyAsync($"**{username}** is listening to {activity}");
+                    break;
+
+                default:
+                    await ReplyAsync($"**{username}** isn't listening to anything!");
+                    break;
+            }
         }
 
         [Command("userinfo", RunMode = RunMode.Async)]
