@@ -22,13 +22,13 @@ namespace Morgana {
         public Storage Vars { get; set; }
 
         [Command("add")]
-        [Summary("Add a role to yourself or another user")]
+        [Summary("Bestow a role upon yourself or another user")]
         [RequireContext(ContextType.Guild)]
         [RequireBotPermission(GuildPermission.ManageRoles)]
         public async Task Add(
-                [Summary("The role to be added")] 
+                [Summary("The role to be bestowed")] 
                 string roleName,
-                [Summary("The user who should get the role, if not yourself")]
+                [Summary("The user upon whom the role should be bestowed, if not yourself")]
                 IGuildUser target = null) {
 
             var guild = Context.Guild;
@@ -36,7 +36,7 @@ namespace Morgana {
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 
             if (target != null && !gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can add roles to other users.");
+                await ReplyAsync("Sorry, only admins can bestow roles upon other users.");
                 return;
             }
 
@@ -92,7 +92,7 @@ namespace Morgana {
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 
             if (target != null && !gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can add roles to other users.");
+                await ReplyAsync("Sorry, only admins can remove roles from other users.");
                 return;
             }
 
@@ -135,7 +135,7 @@ namespace Morgana {
         }
 
         [Command("manage")]
-        [Summary("Allow users to add or remove this role on themselves")]
+        [Summary("Allow users to bestow or remove this role on themselves")]
         [RequireContext(ContextType.Guild)]
         public async Task Manage(
             [Summary("The role that should be managed")]
@@ -165,7 +165,7 @@ namespace Morgana {
         }
 
         [Command("unmanage")]
-        [Summary("Prevent users adding or removing this role on themselves")]
+        [Summary("Prevent users bestowing or removing this role on themselves")]
         [RequireContext(ContextType.Guild)]
         public async Task Unmanage(
             [Summary("The role that should be unmanaged")]
@@ -195,7 +195,7 @@ namespace Morgana {
         }
 
         [Command("list")]
-        [Summary("List the roles that users can add or remove")]
+        [Summary("List the roles that I can bestow")]
         [RequireContext(ContextType.Guild)]
         public async Task List() {
             var guilduser = Context.Guild.GetUser(Context.User.Id);
@@ -213,7 +213,7 @@ namespace Morgana {
             }
 
             var list = String.Join(", ", strings);
-            await ReplyAsync($"I can manage these roles: {list}.");
+            await ReplyAsync($"I can bestow these roles: {list}.");
         }
     }
 }
