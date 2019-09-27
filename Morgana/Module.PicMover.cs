@@ -25,6 +25,7 @@ namespace Morgana {
     [Summary("Configure the pinned picture mover")]
     public class PicMoverModule : ModuleBase<SocketCommandContext> {
         public Storage Vars { get; set; }
+        public PicMover Mover { get; set; }
 
         [Command("from")]
         [Summary("Set the channel to look for pinned pictures in")]
@@ -99,6 +100,26 @@ namespace Morgana {
                 gcfg.DoPins = false;
                 Vars.Save();
                 await ReplyAsync("Done!");
+            }
+        }
+
+        [Command("check")]
+        [Summary("Check for outstanding pins to move")]
+        public async Task Check() {
+            var guild = Context.Guild;
+            var guildUser = guild.GetUser(Context.User.Id);
+            var gcfg = Vars.GetGuild(guild);
+
+            if (!gcfg.IsAdmin(guildUser)) {
+                await ReplyAsync("Sorry, this command can only be used by admins.");
+                return;
+            }
+
+            if (!gcfg.DoPins)
+                await ReplyAsync("The pinned picture mover not enabled on this server.");
+            else {
+                await ReplyAsync("Okay, I'll take a look.");
+                await Mover.CheckPinsForGuild(guild);
             }
         }
 
@@ -179,7 +200,7 @@ namespace Morgana {
             }
         }
 
-        protected async Task CheckPinsForGuild(IGuild guild) {
+        public async Task CheckPinsForGuild(IGuild guild) {
             var gcfg = Vars.GetGuild(guild);
 
             if (!gcfg.DoPins || (gcfg.PinFrom == 0) || (gcfg.PinTo == 0))
