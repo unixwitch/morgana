@@ -32,11 +32,6 @@ namespace Morgana {
                 IGuildUser target = null) {
 
             var guild = Context.Guild;
-            if (guild == null) {
-                await ReplyAsync("This command cannot be used in a direct message.");
-                return;
-            }
-
             var gcfg = Vars.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 

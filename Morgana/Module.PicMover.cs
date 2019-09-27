@@ -16,6 +16,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Threading;
+using System.Collections.Concurrent;
+using System.Threading.Channels;
 
 namespace Morgana {
     [Group("picmover")]
@@ -138,6 +141,14 @@ namespace Morgana {
         public Storage Vars { get; set; }
         public DiscordSocketClient Client { get; set; }
 
+        protected struct PinnedMessage {
+            public ulong GuildID;
+            public ulong ChannelID;
+            public ulong MessageID;
+        };
+
+        private Channel<PinnedMessage> pendingChan = Channel.CreateUnbounded<PinnedMessage>();
+
         public PicMover(Storage vars, DiscordSocketClient client) {
             Vars = vars;
             Client = client;
@@ -145,27 +156,104 @@ namespace Morgana {
 
         public Task InitialiseAsync() {
             Client.MessageUpdated += MessageUpdatedAsync;
+            _ = CheckPins();
+            _ = RunPinner();
             return Task.CompletedTask;
         }
 
-        public async Task MessageUpdatedAsync(Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel ichannel) {
-            if (!after.IsPinned)
+        protected async Task CheckPins() {
+            for (; ;) {
+                await Task.Delay(TimeSpan.FromSeconds(3600));
+
+                if (Client.ConnectionState != ConnectionState.Connected)
+                    continue;
+
+                foreach (var guild in Client.Guilds) {
+                    try {
+                        await CheckPinsForGuild(guild);
+                    } catch (Exception e) {
+                        Console.WriteLine("CheckPinsForGuild failed: " + e.Message);
+                        Console.WriteLine(e.StackTrace);
+                    }
+                }
+            }
+        }
+
+        protected async Task CheckPinsForGuild(IGuild guild) {
+            var gcfg = Vars.GetGuild(guild);
+
+            if (!gcfg.DoPins || (gcfg.PinFrom == 0) || (gcfg.PinTo == 0))
                 return;
 
-            if (after.Attachments.Count() == 0)
-                return;
+            var fromchannel = await guild.GetTextChannelAsync(gcfg.PinFrom);
+            var pins = await fromchannel.GetPinnedMessagesAsync();
+            foreach (var message in pins) {
+                await ConsiderPinning(guild, message);
+            }
+        }
 
-            var message = after as SocketUserMessage;
-            if (message == null)
-                return;
-
+        protected async Task MessageUpdatedAsync(Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel ichannel) {
             var channel = after.Channel as SocketGuildChannel;
             if (channel == null)
                 return;
 
             var guild = channel.Guild;
+            await ConsiderPinning(guild, after);
+        }
+
+        protected async Task ConsiderPinning(IGuild guild, IMessage msg) {
+            var gcfg = Vars.GetGuild(guild);
+            if (!gcfg.DoPins || gcfg.PinFrom != msg.Channel.Id)
+                return;
+
+            if (!(msg is IUserMessage umsg))
+                return;
+
+            if (!msg.IsPinned)
+                return;
+
+            if (msg.Attachments.Count() == 0)
+                return;
+
+            await pendingChan.Writer.WriteAsync(new PinnedMessage {
+                GuildID = guild.Id,
+                ChannelID = msg.Channel.Id,
+                MessageID = msg.Id
+            });
+        }
+
+        protected async Task RunPinner() {
+            for (; ;) {
+                var msg = await pendingChan.Reader.ReadAsync();
+                try {
+                    await PinMessage(msg);
+                } catch (Exception e) {
+                    Console.WriteLine("Pinner failed: " + e.Message);
+                    Console.WriteLine(e.StackTrace);
+                }
+            }
+        }
+
+        protected async Task PinMessage(PinnedMessage msg) {
+            var guild = Client.GetGuild(msg.GuildID);
             var gcfg = Vars.GetGuild(guild);
             if (!gcfg.DoPins || (gcfg.PinFrom == 0) || (gcfg.PinTo == 0))
+                return;
+
+            var channel = Client.GetChannel(msg.ChannelID) as ITextChannel;
+            if (channel == null)
+                return;
+
+            var message = await channel.GetMessageAsync(msg.MessageID);
+            if (message.Channel.Id != gcfg.PinFrom)
+                return;
+            if (!(message is IUserMessage umsg))
+                return;
+
+            if (!umsg.IsPinned)
+                return;
+
+            if (umsg.Attachments.Count() == 0)
                 return;
 
             if (channel.Id != gcfg.PinFrom)
@@ -175,12 +263,12 @@ namespace Morgana {
             if (tochan == null)
                 return;
 
-            await message.UnpinAsync();
+            await umsg.UnpinAsync();
 
-            var first = after.Attachments.First();
-            var rest = after.Attachments.Skip(1);
-            var text = after.Content;
-            var user = after.Author.ToString();
+            var first = message.Attachments.First();
+            var rest = message.Attachments.Skip(1);
+            var text = message.Content;
+            var user = message.Author.ToString();
 
             var firstEmbed =
                 new EmbedBuilder()
