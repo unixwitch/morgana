@@ -40,6 +40,9 @@ namespace Morgana {
                 reply = $"I know about the following commands; use `{prefix}help <command>` for more details:";
 
                 foreach (var mod in Commands.Modules) {
+                    if (mod.Parent != null)
+                        continue;
+
                     if (mod.Group != null)
                         reply += $"\n`{prefix}{mod.Group}` - {mod.Summary}.";
                     else
