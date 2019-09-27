@@ -156,8 +156,9 @@ namespace Morgana {
                     new EmbedBuilder()
                         .WithAuthor(after)
                         .WithTitle("User nickname changed")
-                        .AddField("**Old nickname**", before.Nickname ?? before.Username)
-                        .AddField("**New nickname**", after.Nickname ?? after.Username)
+                        .AddField("**Old nickname**", before.Nickname ?? before.Username, true)
+                        .AddField("**New nickname**", after.Nickname ?? after.Username, true)
+                        .WithFooter($"User ID: {after.Id}")
                         .Build());
             }
 
@@ -179,12 +180,11 @@ namespace Morgana {
             if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
                 return;
 
-            var usertext = $"{user.Username}#{user.Discriminator} [{user.Id}]";
             var embed =
                 new EmbedBuilder()
                     .WithAuthor(user)
-//                    .WithTitle("**User joined**")
-                    .AddField("**User joined**", usertext)
+                    .WithTitle("**User joined**")
+                    .WithFooter($"User ID: {user.Id}")
                     .Build();
 
             var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
@@ -203,12 +203,11 @@ namespace Morgana {
             if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
                 return;
 
-            var usertext = $"{user.Username}#{user.Discriminator} [{user.Id}]";
             var embed =
                 new EmbedBuilder()
                     .WithAuthor(user)
-//                    .WithTitle("**User left**")
-                    .AddField("**User left**", usertext)
+                    .WithTitle("**User left**")
+                    .WithFooter($"User ID: {user.Id}")
                     .Build();
 
             var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
@@ -230,8 +229,8 @@ namespace Morgana {
             var embed =
                 new EmbedBuilder()
                     .WithAuthor(user)
-//                    .WithTitle("**User banned**")
-                    .AddField("**User banned**", usertext)
+                    .WithTitle("**User banned**")
+                    .WithFooter($"User ID: {user.Id}")
                     .Build();
 
             var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
@@ -266,9 +265,9 @@ namespace Morgana {
             var embed =
                 new EmbedBuilder()
                     .WithAuthor(message.Author)
-                    .WithTitle("**Message deleted**")
-                    .AddField("**User**", user)
+                    .AddField("**Message deleted**", "In " + MentionUtils.MentionChannel(message.Channel.Id))
                     .AddField("**Message**", beforetext)
+                    .WithFooter($"User ID: {message.Author.Id}")
                     .Build();
 
             var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
@@ -309,15 +308,15 @@ namespace Morgana {
             if (aftertext.Length > 900)
                 aftertext = aftertext.Substring(0, 900);
 
-            var user = $"{beforeMessage.Author.Username}#{beforeMessage.Author.Discriminator} [{beforeMessage.Author.Id}]";
+            var channelName = after.Channel.ToString();
 
             var embed =
                 new EmbedBuilder()
                     .WithAuthor(beforeMessage.Author)
-                    .WithTitle("**Message edited**")
-                    .AddField("**User**", user ?? "<unknown>")
-                    .AddField("**Before**", beforetext ?? "<unknown>")
-                    .AddField("**After**", aftertext ?? "<unknown>")
+                    .AddField("**Message edited**", "In " + MentionUtils.MentionChannel(after.Channel.Id))
+                    .AddField("**Before**", Format.Sanitize(beforetext ?? "<unknown>"))
+                    .AddField("**After**", Format.Sanitize(aftertext ?? "<unknown>"))
+                    .WithFooter($"User ID: {after.Author.Id}")
                     .Build();
 
             var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
