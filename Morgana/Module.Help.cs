@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
 using System.Linq;
+using Discord;
 
 namespace Morgana {
     public class HelpModule : ModuleBase<SocketCommandContext> {
@@ -28,6 +29,7 @@ namespace Morgana {
             string reply;
             string prefix = "";
             GuildConfig gcfg = null;
+            EmbedBuilder embed = null;
 
             if (Context.Guild != null) {
                 gcfg = Vars.GetGuild(Context.Guild);
@@ -76,20 +78,24 @@ namespace Morgana {
                     }
                 }
 
-                reply = $"**Module**: `{prefix}{matched}` - {minfo.Summary}.";
+                embed = new EmbedBuilder();
+                embed.AddField("**Module**", $"{prefix}{matched} - {minfo.Summary}");
 
-                reply += "\n**Commands**:";
+                string commands = "";
                 foreach (var mod in minfo.Submodules)
-                    reply += $"\n`{prefix}{matched} {mod.Name}` - {mod.Summary}.";
+                    commands += $"\n`{prefix}{matched} {mod.Name}` - {mod.Summary}.";
                 foreach (var cmd in minfo.Commands)
-                    reply += $"\n`{prefix}{matched} {cmd.Name}` - {cmd.Summary}.";
+                    commands += $"\n`{prefix}{matched} {cmd.Name}` - {cmd.Summary}.";
+                embed.AddField("**Commands**", commands);
 
-                await ReplyAsync(reply);
+                await ReplyAsync(embed: embed.Build());
                 return;
             }
 
             var info = sr.Commands[0];
             var cmdName = info.Command.Name;
+
+            embed = new EmbedBuilder();
 
             var module = info.Command.Module;
             while (module != null) {
@@ -98,6 +104,8 @@ namespace Morgana {
                 module = module.Parent;
             }
             cmdName = prefix + cmdName;
+
+            embed.WithTitle($"Command help: {cmdName}");
 
             var parms = new List<string>();
             string parmHelp = "";
@@ -114,22 +122,21 @@ namespace Morgana {
                 parmHelp += $"\n`{parm.Name}`: {req} {parm.Summary}.";
             }
             var parmstr = String.Join(" ", parms);
-
-            string summary = info.Command.Summary;
+            string syntax = "";
 
             if (parmstr.Length == 0)
-                reply = $"`{cmdName}`";
+                syntax = $"`{cmdName}`";
             else
-                reply = $"`{cmdName} {parmstr}`";
+                syntax = $"`{cmdName} {parmstr}`";
+            embed.AddField("**Syntax**", syntax);
 
-            reply += $"\n**Description**: {summary}";
+            string summary = info.Command.Summary;
+            embed.AddField("**Description**", $"{summary}.");
 
-            if (parmHelp.Length > 0) {
-                reply += "\n**Parameters**:";
-                reply += parmHelp;
-            }
+            if (parmHelp.Length > 0)
+                embed.AddField("**Parameters**", parmHelp);
 
-            await ReplyAsync(reply);
+            await ReplyAsync(embed: embed.Build());
         }
     }
 }

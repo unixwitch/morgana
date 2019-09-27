@@ -112,22 +112,28 @@ namespace Morgana {
         }
 
         [Command("userinfo", RunMode = RunMode.Async)]
-        [Summary("Display some information about you")]
+        [Summary("Display some information about yourself or another user")]
         [RequireContext(ContextType.Guild)]
-        public async Task Userinfo() {
-            var user = Context.User as IGuildUser;
+        public async Task Userinfo([Summary("The user to display, if not yourself")] IGuildUser target = null) {
+            var gcfg = Vars.GetGuild(Context.Guild);
 
-            var discorddate = user.CreatedAt.ToString("dd MMM yyyy HH:mm");
-            var discorddays = (int)(DateTime.Now - user.CreatedAt).TotalDays;
+            target ??= Context.User as IGuildUser;
+            if (target.Id != Context.User.Id && !gcfg.IsAdmin(Context.User.Id)) {
+                await ReplyAsync("Sorry, only admins can see another user's info.");
+                return;
+            }
+
+            var discorddate = target.CreatedAt.ToString("dd MMM yyyy HH:mm");
+            var discorddays = (int)(DateTime.Now - target.CreatedAt).TotalDays;
             var discordField = new EmbedFieldBuilder()
                 .WithName("**Joined Discord on**")
                 .WithValue($"{discorddate}\n({discorddays} days ago)")
                 .WithIsInline(true);
 
             EmbedFieldBuilder serverField;
-            if (user.JoinedAt != null) {
-                var serverdate = user.JoinedAt.Value.ToString("dd MMM yyyy HH:mm");
-                var serverdays = (int)(DateTime.Now - user.JoinedAt.Value).TotalDays;
+            if (target.JoinedAt != null) {
+                var serverdate = target.JoinedAt.Value.ToString("dd MMM yyyy HH:mm");
+                var serverdays = (int)(DateTime.Now - target.JoinedAt.Value).TotalDays;
                 serverField = new EmbedFieldBuilder()
                     .WithName("**Joined this server on**")
                     .WithValue($"{serverdate}\n({serverdays} days ago)")
@@ -138,22 +144,44 @@ namespace Morgana {
                     .WithValue("Unknown")
                     .WithIsInline(true);
 
-            var rolesField = new EmbedFieldBuilder()
-                .WithName("**Roles**")
-                .WithValue(String.Join(", ",
-                    user.RoleIds
-                        .Select(roleId => Context.Guild.GetRole(roleId))
-                        .Where(role => role != null)
-                        .Where(role => !role.IsEveryone)
-                        .Select(role => role.Name)));
+            EmbedFieldBuilder rolesField = new EmbedFieldBuilder().WithName("**Roles**");
+            var roles =
+                target.RoleIds
+                    .Select(roleId => Context.Guild.GetRole(roleId))
+                    .Where(role => role != null)
+                    .Where(role => !role.IsEveryone)
+                    .Select(role => role.Name);
 
-            var footer = $"User ID: {user.Id}";
+            if (roles.Count() == 0)
+                rolesField.WithValue("None.");
+            else
+                rolesField.WithValue(String.Join(", ", roles));
+
+            var footer = $"User ID: {target.Id}";
 
             var builder =
                 new EmbedBuilder()
-                    .WithThumbnailUrl(user.GetAvatarUrl());
-//                    .WithAuthor(user);
-            builder.AddField($"**{user.ToString()}**", user.Activity == null ? "" : ("Playing " + user.Activity.Name));
+                    .WithThumbnailUrl(target.GetAvatarUrl());
+            //                    .WithAuthor(user);
+            if (target.Activity != null) {
+                var activityType = target.Activity.Type;
+                var activityName = target.Activity.Name;
+                var activityDetails = target.Activity.ToString();
+                string activity = null;
+
+                switch (activityType) {
+                    case ActivityType.Listening:
+                        activity = $"Listening to {activityName}: {activityDetails}";
+                        break;
+
+                    default:
+                        activity = $"{activityType.ToString()} {target.Activity.Name}";
+                        break;
+                }
+
+                builder.AddField($"**{target.ToString()}**", activity);
+            } else
+                builder.AddField($"**{target.ToString()}**", target.Status.ToString());
 
             var embed = builder
                 .AddField(discordField)
