@@ -27,9 +27,11 @@ namespace Morgana {
         public async Task Help([Remainder] string command = null) {
             string reply;
             string prefix = "";
+            GuildConfig gcfg = null;
+
             if (Context.Guild != null) {
-                var gcfg = Vars.GetGuild(Context.Guild);
-                prefix = gcfg.CommandPrefix;
+                gcfg = Vars.GetGuild(Context.Guild);
+                prefix = gcfg.CommandPrefix ?? "~";
             }
 
             if (command == null) {
@@ -37,15 +39,18 @@ namespace Morgana {
 
                 foreach (var mod in Commands.Modules) {
                     if (mod.Group != null)
-                        reply += $"\n`{prefix}{mod.Group}` - {mod.Summary}";
+                        reply += $"\n`{prefix}{mod.Group}` - {mod.Summary}.";
                     else
                         foreach (var cmd in mod.Commands)
-                            reply += $"\n`{prefix}{cmd.Name}` - {cmd.Summary}";
+                            reply += $"\n`{prefix}{cmd.Name}` - {cmd.Summary}.";
                 }
 
                 await ReplyAsync(reply);
                 return;
             }
+
+            if (command.StartsWith(prefix))
+                command = command.Substring(prefix.Length);
 
             var sr = Commands.Search(command);
 
@@ -71,13 +76,13 @@ namespace Morgana {
                     }
                 }
 
-                reply = $"**Module**: `{prefix}{matched}` - {minfo.Summary}";
+                reply = $"**Module**: `{prefix}{matched}` - {minfo.Summary}.";
 
                 reply += "\n**Commands**:";
                 foreach (var mod in minfo.Submodules)
-                    reply += $"\n`{prefix}{matched} {mod.Name}` - {mod.Summary}";
+                    reply += $"\n`{prefix}{matched} {mod.Name}` - {mod.Summary}.";
                 foreach (var cmd in minfo.Commands)
-                    reply += $"\n`{prefix}{matched} {cmd.Name}` - {cmd.Summary}";
+                    reply += $"\n`{prefix}{matched} {cmd.Name}` - {cmd.Summary}.";
 
                 await ReplyAsync(reply);
                 return;
@@ -106,7 +111,7 @@ namespace Morgana {
                 parms.Add(astext);
 
                 var req = parm.IsOptional ? "(optional)" : "(required)";
-                parmHelp += $"\n`{parm.Name}`: {req} {parm.Summary}";
+                parmHelp += $"\n`{parm.Name}`: {req} {parm.Summary}.";
             }
             var parmstr = String.Join(" ", parms);
 
