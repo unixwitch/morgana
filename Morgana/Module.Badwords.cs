@@ -49,7 +49,7 @@ namespace Morgana {
         [Command("add")]
         [Summary("Add a new bad word")]
         [RequireContext(ContextType.Guild)]
-        public async Task Add([Summary("The bad word to add")] string word) {
+        public async Task Add([Summary("The bad words to add")] params string[] words) {
             var guild = Context.Guild;
             var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
@@ -59,17 +59,30 @@ namespace Morgana {
                 return;
             }
 
-            if (gcfg.BadwordAdd(word)) {
+            List<string> existing = new List<string>();
+            int added = 0;
+
+            foreach (var word in words) {
+                if (gcfg.BadwordAdd(word))
+                    added++;
+                else
+                    existing.Add(word);
+            }
+
+            Vars.Save();
+
+            if (existing.Count() == 0)
                 await ReplyAsync("Done!");
-                Vars.Save();
-            } else
-                await ReplyAsync("That word was already on the bad words list.");
+            else {
+                var existingstr = String.Join(", ", existing.Select(x => $"`{x}`"));
+                await ReplyAsync($"Added {added} words to the bad words list.  The following words are already in the filter: {existingstr}.");
+            }
         }
 
         [Command("remove")]
         [Summary("Remove a bad word")]
         [RequireContext(ContextType.Guild)]
-        public async Task Remove([Summary("The bad word to remove")] string word) {
+        public async Task Remove([Summary("The bad words to remove")] params string[] words) {
             var guild = Context.Guild;
             var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
@@ -79,11 +92,24 @@ namespace Morgana {
                 return;
             }
 
-            if (gcfg.BadwordRemove(word)) {
+            List<string> notfound = new List<string>();
+            int removed = 0;
+
+            foreach (var word in words) {
+                if (gcfg.BadwordRemove(word))
+                    removed++;
+                else
+                    notfound.Add(word);
+            }
+
+            Vars.Save();
+
+            if (notfound.Count() == 0)
                 await ReplyAsync("Done!");
-                Vars.Save();
-            } else
-                await ReplyAsync("That word is not on the bad words list.");
+            else {
+                var notfoundstr = String.Join(", ", notfound.Select(x => $"`{x}`"));
+                await ReplyAsync($"Removed {removed} words from the bad words list.  The following words are not in the filter: {notfoundstr}.");
+            }
         }
 
         [Command("enable")]
@@ -184,7 +210,7 @@ namespace Morgana {
         }
 
         public Task InitialiseAsync() {
-//            Client.MessageReceived += FilterMessageAsync;
+            //            Client.MessageReceived += FilterMessageAsync;
             return Task.CompletedTask;
         }
 

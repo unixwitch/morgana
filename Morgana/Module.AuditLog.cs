@@ -315,9 +315,9 @@ namespace Morgana {
                 new EmbedBuilder()
                     .WithAuthor(beforeMessage.Author)
                     .WithTitle("**Message edited**")
-                    .AddField("**User**", user)
-                    .AddField("**Before**", beforetext)
-                    .AddField("**After**", aftertext)
+                    .AddField("**User**", user ?? "<unknown>")
+                    .AddField("**Before**", beforetext ?? "<unknown>")
+                    .AddField("**After**", aftertext ?? "<unknown>")
                     .Build();
 
             var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
