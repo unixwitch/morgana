@@ -162,26 +162,36 @@ namespace Morgana {
             var builder =
                 new EmbedBuilder()
                     .WithThumbnailUrl(target.GetAvatarUrl());
-            //                    .WithAuthor(user);
+
+            builder.AddField($"**{target.ToString()}**", target.Status.ToString());
+
             if (target.Activity != null) {
                 var activityType = target.Activity.Type;
                 var activityName = target.Activity.Name;
                 var activityDetails = target.Activity.ToString();
                 string activity = null;
 
-                switch (activityType) {
-                    case ActivityType.Listening:
-                        activity = $"Listening to {activityName}: {activityDetails}";
+                switch (target.Activity) {
+                    case SpotifyGame spotify:
+                        var artists = Format.Sanitize(String.Join(", ", spotify.Artists));
+                        var trackTitle = Format.Sanitize(spotify.TrackTitle);
+                        var trackUrl = Format.Sanitize(spotify.TrackUrl);
+                        var track = $"[{trackTitle}]({trackUrl})";
+                        activity = $"{artists} - {track} (on {spotify.AlbumTitle})";
+                        builder.AddField($"**Listening to**", activity);
+                        break;
+
+                    case Game game:
+                        activity = $"{activityType.ToString()} {target.Activity.Name}";
+                        builder.AddField("**Playing**", activity);
                         break;
 
                     default:
-                        activity = $"{activityType.ToString()} {target.Activity.Name}";
+                        builder.AddField($"**Doing**", target.Activity.ToString());
                         break;
                 }
 
-                builder.AddField($"**{target.ToString()}**", activity);
-            } else
-                builder.AddField($"**{target.ToString()}**", target.Status.ToString());
+            }
 
             var embed = builder
                 .AddField(discordField)
