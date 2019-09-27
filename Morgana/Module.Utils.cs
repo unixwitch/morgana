@@ -125,7 +125,7 @@ namespace Morgana {
             var flipped = FlipString(ftext);
             char[] flipa = flipped.ToArray();
             Array.Reverse(flipa);
-            await ReplyAsync("(╯°□°）╯︵ " + new string(flipa));
+            await ReplyAsync("(╯°□°）╯︵ " + Format.Sanitize(new string(flipa)));
         }
 
         [Command("np", RunMode = RunMode.Async)]
