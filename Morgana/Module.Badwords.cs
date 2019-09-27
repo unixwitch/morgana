@@ -37,12 +37,12 @@ namespace Morgana {
                 return;
             }
 
-            if (gcfg.Badwords.Count() == 0) {
+            if (gcfg.BadwordsList.Count() == 0) {
                 await ReplyAsync("No bad words are configured.");
                 return;
             }
 
-            var words = String.Join(", ", gcfg.Badwords.Select(x => $"`{x}`"));
+            var words = String.Join(", ", gcfg.BadwordsList.Select(x => $"`{x}`"));
             await ReplyAsync($"Current bad words list: {words}.");
         }
 
@@ -184,29 +184,29 @@ namespace Morgana {
         }
 
         public Task InitialiseAsync() {
-            Client.MessageReceived += FilterMessageAsync;
+//            Client.MessageReceived += FilterMessageAsync;
             return Task.CompletedTask;
         }
 
-        public async Task FilterMessageAsync(SocketMessage p) {
+        public async Task<bool> FilterMessageAsync(SocketMessage p) {
             var message = p as SocketUserMessage;
             if (message == null)
-                return;
+                return false;
 
             if (message.Author.IsBot)
-                return;
+                return false;
 
             var channel = message.Channel as SocketGuildChannel;
             if (channel == null)
-                return;
+                return false;
 
             var gcfg = Vars.GetGuild(channel.Guild);
             if (!gcfg.BadwordsEnabled)
-                return;
+                return false;
 
             var bw = gcfg.CommandPrefix + "badwords";
             if (message.Content.StartsWith(bw))
-                return;
+                return false;
 
             var re = new Regex(@"\b");
             var words = re.Split(message.Content);
@@ -221,9 +221,11 @@ namespace Morgana {
 
                     msg = msg.Replace("<user>", message.Author.Mention);
                     await message.Channel.SendMessageAsync(msg);
-                    break;
+                    return true;
                 }
             }
+
+            return false;
         }
     }
 }

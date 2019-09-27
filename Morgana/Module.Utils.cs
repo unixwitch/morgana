@@ -21,15 +21,15 @@ namespace Morgana {
     public class UtilsModule : ModuleBase<SocketCommandContext> {
         public Storage Vars { get; set; }
 
-        [Command("ping")]
+        [Command("ping", RunMode = RunMode.Async)]
         [Summary("Check whether I'm still alive")]
         public Task Ping() => ReplyAsync("I LIVE!");
 
-        [Command("time")]
+        [Command("time", RunMode = RunMode.Async)]
         [Summary("Find out what the current time is")]
         public Task Time() => ReplyAsync($"The current time in UTC is {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")}");
 
-        [Command("say")]
+        [Command("say", RunMode = RunMode.Async)]
         [Summary("Make me say something")]
         [RequireContext(ContextType.Guild)]
         public async Task Say([Summary("The channel I should talk in")] ITextChannel channel,
@@ -46,7 +46,7 @@ namespace Morgana {
             await channel.SendMessageAsync(words);
         }
 
-        [Command("hug")]
+        [Command("hug", RunMode = RunMode.Async)]
         [Summary("Hug a user")]
         [RequireContext(ContextType.Guild)]
         public async Task Hug(
@@ -69,7 +69,7 @@ namespace Morgana {
             await ReplyAsync(msg);
         }
 
-        [Command("choose")]
+        [Command("choose", RunMode = RunMode.Async)]
         [Summary("Choose one of a list of options")]
         public async Task Choose([Summary("The options to choose from")] params string[] options) {
             string opt = options[new Random().Next(0, options.Length)];
@@ -99,7 +99,7 @@ namespace Morgana {
             return t.ToString();
         }
 
-        [Command("flip")]
+        [Command("flip", RunMode = RunMode.Async)]
         [Summary("Flip a coin... or a user.  Defaults to coin.")]
         public async Task Flip([Summary("The user to flip")] IGuildUser user = null) {
             if (user == null) {
@@ -111,7 +111,7 @@ namespace Morgana {
             await ReplyAsync("(╯°□°）╯︵ " + flipped);
         }
 
-        [Command("userinfo")]
+        [Command("userinfo", RunMode = RunMode.Async)]
         [Summary("Display some information about you")]
         [RequireContext(ContextType.Guild)]
         public async Task Userinfo() {
@@ -165,7 +165,7 @@ namespace Morgana {
             await ReplyAsync(embed: embed);
         }
 
-        [Command("serverinfo")]
+        [Command("serverinfo", RunMode = RunMode.Async)]
         [Summary("Display some information about this server")]
         [RequireContext(ContextType.Guild)]
         public async Task Serverinfo() {

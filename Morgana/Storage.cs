@@ -19,63 +19,236 @@ using System.Threading.Tasks;
 using System.IO;
 using Newtonsoft.Json;
 using Discord;
+using System.Threading;
 
 namespace Morgana {
     public class GuildConfig {
-        public HashSet<ulong> Admins { get; set; } = new HashSet<ulong>();
-        public HashSet<ulong> ManagedRoles { get; set; } = new HashSet<ulong>();
-        public string CommandPrefix { get; set; }
+        [JsonProperty("Admins")]
+        private HashSet<ulong> _admins = new HashSet<ulong>();
+        [JsonIgnore]
+        public HashSet<ulong> AdminList {
+            get {
+                lock (_mutex) {
+                    return new HashSet<ulong>(_admins);
+                }
+            }
+        }
 
-        public HashSet<string> Badwords { get; set; } = new HashSet<string>();
-        public bool BadwordsEnabled { get; set; } = true;
-        public string BadwordsMessage { get; set; }
 
-        public bool AuditEnabled { get; set; } = false;
-        public ulong AuditChannel { get; set; } = 0;
+        [JsonProperty("ManagedRoles")]
+        private HashSet<ulong> _managedRoles = new HashSet<ulong>();
+        [JsonIgnore]
+        public HashSet<ulong> ManagedRoleList {
+            get {
+                lock (_mutex) {
+                    return _managedRoles;
+                }
+            }
+        }
 
-        public ulong PinFrom { get; set; } = 0;
-        public ulong PinTo { get; set; } = 0;
-        public bool DoPins { get; set; } = false;
+        [JsonProperty("CommandPrefix")]
+        private string _commandPrefix;
+        [JsonIgnore]
+        public string CommandPrefix {
+            get {
+                lock (_mutex) {
+                    return _commandPrefix;
+                }
+            }
+            set {
+                lock (_mutex) {
+                    _commandPrefix = value;
+                }
+            }
+        }
 
-#if false
-        public ulong PracticeChannel { get; set; } = 0;
-        public string PracticeMessage { get; set; }
-#endif
+        [JsonProperty("Badwords")]
+        private HashSet<string> _badwords = new HashSet<string>();
+        [JsonIgnore]
+        public HashSet<string> BadwordsList {
+            get {
+                lock (_mutex) {
+                    return new HashSet<string>(_badwords);
+                }
+            }
+        }
 
+        [JsonProperty("BadwordsEnabled")]
+        private bool _badwordsEnabled = true;
+        [JsonIgnore]
+        public bool BadwordsEnabled {
+            get {
+                lock (_mutex) {
+                    return _badwordsEnabled;
+                }
+            }
+            set {
+                lock (_mutex) {
+                    _badwordsEnabled = value;
+                }
+            }
+        }
+
+        [JsonProperty("BadwordsMessage")]
+        private string _badwordsMessage;
+        [JsonIgnore]
+        public string BadwordsMessage {
+            get {
+                lock (_mutex) {
+                    return _badwordsMessage;
+                }
+            }
+            set {
+                lock (_mutex) {
+                    _badwordsMessage = value;
+                }
+            }
+        }
+
+        [JsonProperty("AuditEnabled")]
+        private bool _auditEnabled = false;
+        [JsonIgnore]
+        public bool AuditEnabled {
+            get {
+                lock (_mutex) {
+                    return _auditEnabled;
+                }
+            }
+            set {
+                lock (_mutex) {
+                    _auditEnabled = value;
+                }
+            }
+        }
+
+        [JsonProperty("AuditChannel")]
+        private ulong _auditChannel = 0;
+
+        [JsonIgnore]
+        public ulong AuditChannel {
+            get {
+                lock (_mutex) {
+                    return _auditChannel;
+                }
+            }
+            set {
+                lock (_mutex) {
+                    _auditChannel = value;
+                }
+            }
+        }
+
+        [JsonProperty("PinFrom")]
+        private ulong _pinFrom = 0;
+        [JsonIgnore]
+        public ulong PinFrom {
+            get {
+                lock (_mutex) {
+                    return _pinFrom;
+                }
+            }
+            set {
+                lock (_mutex) {
+                    _pinFrom = value;
+                }
+            }
+        }
+
+        [JsonProperty("PinTo")]
+        private ulong _pinTo = 0;
+        [JsonIgnore]
+        public ulong PinTo {
+            get {
+                lock (_mutex) {
+                    return _pinTo;
+                }
+            }
+            set {
+                lock (_mutex) {
+                    _pinTo = value;
+                }
+            }
+        }
+
+        [JsonProperty("DoPins")]
+        private bool _doPins = false;
+        [JsonIgnore]
+        public bool DoPins {
+            get {
+                lock (_mutex) {
+                    return _doPins;
+                }
+            }
+            set {
+                lock (_mutex) {
+                    _doPins = value;
+                }
+            }
+        }
+
+        internal Mutex _mutex = new Mutex();
+
+        public bool AdminAdd(ulong id) {
+            lock (_mutex) {
+                return _admins.Add(id);
+            }
+        }
         public bool AdminAdd(IGuildUser user) {
-            return Admins.Add(user.Id);
+            return AdminAdd(user.Id);
         }
 
+        public bool AdminRemove(ulong id) {
+            lock (_mutex) {
+                return _admins.Remove(id);
+            }
+        }
         public bool AdminRemove(IGuildUser user) {
-            return Admins.Remove(user.Id);
+            return AdminRemove(user.Id);
         }
 
+        public bool IsAdmin(ulong id) {
+            lock (_mutex) {
+                return _admins.Contains(id);
+            }
+        }
         public bool IsAdmin(IGuildUser user) {
-            return Admins.Contains(user.Id);
+            return IsAdmin(user.Id);
         }
 
         public bool ManagedRoleAdd(IRole role) {
-            return ManagedRoles.Add(role.Id);
+            lock (_mutex) {
+                return _managedRoles.Add(role.Id);
+            }
         }
 
         public bool ManagedRoleRemove(IRole role) {
-            return ManagedRoles.Remove(role.Id);
+            lock (_mutex) {
+                return _managedRoles.Remove(role.Id);
+            }
         }
 
         public bool IsManagedrole(IRole role) {
-            return ManagedRoles.Contains(role.Id);
+            lock (_mutex) {
+                return _managedRoles.Contains(role.Id);
+            }
         }
 
         public bool BadwordAdd(string word) {
-            return Badwords.Add(word);
+            lock (_mutex) {
+                return _badwords.Add(word);
+            }
         }
 
         public bool BadwordRemove(string word) {
-            return Badwords.Remove(word);
+            lock (_mutex) {
+                return _badwords.Remove(word);
+            }
         }
 
         public bool IsBadword(string word) {
-            return Badwords.Contains(word);
+            lock (_mutex) {
+                return _badwords.Contains(word);
+            }
         }
     }
 
@@ -85,13 +258,16 @@ namespace Morgana {
 
     public class Storage {
         DataStore store = new DataStore();
+        private Mutex _mutex = new Mutex();
 
         public Storage() {
             Load();
         }
 
         public void Save() {
-            File.WriteAllText("vars.json", JsonConvert.SerializeObject(store));
+            lock (_mutex) {
+                File.WriteAllText("vars.json", JsonConvert.SerializeObject(store));
+            }
         }
 
         public void Load() {

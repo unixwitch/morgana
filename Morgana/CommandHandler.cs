@@ -22,16 +22,29 @@ using Discord;
 
 namespace Morgana {
     public class CommandHandler {
-        public DiscordSocketClient _client { get; set; }
-        public CommandService _commands { get; set; }
-        public IServiceProvider _services { get; set; }
-        public Storage _config { get; set; }
+        private DiscordSocketClient _client;
+        private CommandService _commands;
+        private IServiceProvider _services;
+        private Storage _config;
+        private BadwordsFilter _filter;
 
-        public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider services, Storage config) {
+        public CommandHandler(
+            DiscordSocketClient client,
+            CommandService commands,
+            IServiceProvider services,
+            Storage config,
+            BadwordsFilter filter) {
+
             _client = client;
             _commands = commands;
             _services = services;
             _config = config;
+            _filter = filter;
+        }
+
+        public async Task InitializeAsync() {
+            _client.MessageReceived += HandleCommand;
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
         }
 
         public async Task HandleCommand(SocketMessage p) {
@@ -42,12 +55,20 @@ namespace Morgana {
             if (message.Author.IsBot)
                 return;
 
+            if (await _filter.FilterMessageAsync(p))
+                return;
+
             int argpos = 0;
             var channel = message.Channel as SocketGuildChannel;
             if (channel != null) {
                 var gcfg = _config.GetGuild(channel.Guild);
                 if (gcfg.CommandPrefix == null)
                     gcfg.CommandPrefix = "~";
+
+                // If the command prefix is doubled, ignore it.  This avoids responding to formatting at
+                // the start of the line, e.g. ~~ or **.
+                if (gcfg.CommandPrefix.Length == 1 && message.Content.Length >= 2 && message.Content[1] == gcfg.CommandPrefix[0])
+                    return;
 
                 if (!(message.HasStringPrefix(gcfg.CommandPrefix, ref argpos)) || message.HasMentionPrefix(_client.CurrentUser, ref argpos))
                     return;
@@ -58,11 +79,6 @@ namespace Morgana {
 
             if (!result.IsSuccess)
                 await context.Channel.SendMessageAsync(result.ErrorReason);
-        }
-
-        public async Task InitializeAsync() {
-            _client.MessageReceived += HandleCommand;
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
         }
     }
 }

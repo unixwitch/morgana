@@ -30,13 +30,13 @@ namespace Morgana {
         public async Task List() {
             var gcfg = Vars.GetGuild(Context.Guild);
 
-            if (gcfg.Admins.Count() == 0) {
+            if (gcfg.AdminList.Count() == 0) {
                 await ReplyAsync("No admins have been configured yet.");
                 return;
             }
 
             var strings = new List<string>();
-            foreach (var admin in gcfg.Admins) {
+            foreach (var admin in gcfg.AdminList) {
                 var guild = (IGuild)Context.Guild;
                 var user = await guild.GetUserAsync(admin);
 
@@ -63,7 +63,7 @@ namespace Morgana {
                 var gcfg = Vars.GetGuild(guild);
                 var guilduser = Context.Guild.GetUser(Context.User.Id);
 
-                if (gcfg.Admins.Count() == 0) {
+                if (gcfg.AdminList.Count() == 0) {
                     if (!guilduser.GuildPermissions.Administrator) {
                         await ReplyAsync("No admins have been defined yet, so only the server owner can use this command.");
                         return;
@@ -116,7 +116,7 @@ namespace Morgana {
                     return;
                 }
 
-                if (gcfg.Admins.Count() == 1) {
+                if (gcfg.AdminList.Count() == 1) {
                     await ReplyAsync("You cannot remove the last admin, otherwise there would be none left.");
                     return;
                 }

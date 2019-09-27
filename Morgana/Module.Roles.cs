@@ -208,7 +208,7 @@ namespace Morgana {
 
             var strings = new List<string>();
 
-            foreach (var roleId in gcfg.ManagedRoles) {
+            foreach (var roleId in gcfg.ManagedRoleList) {
                 IRole role;
                 try {
                     role = Context.Guild.Roles.First(r => r.Id == roleId);

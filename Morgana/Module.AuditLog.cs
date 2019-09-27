@@ -195,8 +195,8 @@ namespace Morgana {
             var guild = user.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (gcfg.Admins.Contains(user.Id)) {
-                gcfg.Admins.Remove(user.Id);
+            if (gcfg.IsAdmin(user.Id)) {
+                gcfg.AdminRemove(user.Id);
                 Vars.Save();
             }
 
@@ -218,8 +218,8 @@ namespace Morgana {
         public async Task UserBannedAsync(SocketUser user, SocketGuild guild) {
             var gcfg = Vars.GetGuild(guild);
 
-            if (gcfg.Admins.Contains(user.Id)) {
-                gcfg.Admins.Remove(user.Id);
+            if (gcfg.IsAdmin(user.Id)) {
+                gcfg.AdminRemove(user.Id);
                 Vars.Save();
             }
 
