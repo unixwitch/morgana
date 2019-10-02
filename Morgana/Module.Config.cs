@@ -41,10 +41,9 @@ namespace Morgana {
             switch (item) {
                 case "prefix":
                     if (newValue == null) 
-                        await ReplyAsync($"The current command prefix is `{gcfg.CommandPrefix}`.");
+                        await ReplyAsync($"The current command prefix is `{await gcfg.GetCommandPrefixAsync() ?? "~"}`.");
                     else {
-                        gcfg.CommandPrefix = newValue;
-                        Vars.Save();
+                        await gcfg.SetCommandPrefixAsync(newValue);
                         await ReplyAsync("Done!");
                     }
                     return;

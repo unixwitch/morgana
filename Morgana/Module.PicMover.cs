@@ -34,8 +34,7 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            gcfg.PinFrom = channel.Id;
-            Vars.Save();
+            await gcfg.SetPinFromAsync(channel.Id);
             await ReplyAsync("Done!");
         }
 
@@ -44,11 +43,9 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task To(ITextChannel channel) {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
 
-            gcfg.PinTo = channel.Id;
-            Vars.Save();
+            await gcfg.SetPinToAsync(channel.Id);
             await ReplyAsync("Done!");
         }
 
@@ -59,11 +56,10 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (gcfg.DoPins)
+            if (await gcfg.IsPinnerEnabledAsync())
                 await ReplyAsync("The pinned picture mover is already enabled.");
             else {
-                gcfg.DoPins = true;
-                Vars.Save();
+                await gcfg.SetPinnerEnabledAsync(true);
                 await ReplyAsync("Done!");
             }
         }
@@ -73,14 +69,12 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Disable() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.DoPins)
+            if (!await gcfg.IsPinnerEnabledAsync())
                 await ReplyAsync("The pinned picture mover is already disabled.");
             else {
-                gcfg.DoPins = false;
-                Vars.Save();
+                await gcfg.SetPinnerEnabledAsync(false);
                 await ReplyAsync("Done!");
             }
         }
@@ -92,7 +86,7 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.DoPins)
+            if (!await gcfg.IsPinnerEnabledAsync())
                 await ReplyAsync("The pinned picture mover is not enabled on this server.");
             else {
                 await ReplyAsync("Okay, I'll take a look.");
@@ -107,15 +101,17 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            string status = "The picture mover is " + (gcfg.DoPins ? "enabled." : "disabled.");
+            string status = "The picture mover is " + (await gcfg.IsPinnerEnabledAsync() ? "enabled." : "disabled.");
 
             IGuildChannel fromchan = null;
-            if (gcfg.PinFrom != 0)
-                fromchan = guild.GetTextChannel(gcfg.PinFrom);
+            var fromchanId = await gcfg.GetPinFromAsync();
+            if (fromchanId != 0)
+                fromchan = guild.GetTextChannel(fromchanId);
 
             IGuildChannel tochan = null;
-            if (gcfg.PinTo != 0)
-                tochan = guild.GetTextChannel(gcfg.PinTo);
+            var tochanId = await gcfg.GetPinToAsync();
+            if (tochanId != 0)
+                tochan = guild.GetTextChannel(tochanId);
 
             if (fromchan != null && tochan != null)
                 status += $"  Pictures will be moved from {MentionUtils.MentionChannel(fromchan.Id)} to {MentionUtils.MentionChannel(tochan.Id)}.";
@@ -124,7 +120,7 @@ namespace Morgana {
             else if (tochan != null)
                 status += $"  Pictures would be moved to {MentionUtils.MentionChannel(tochan.Id)}, but no source channel is configured.";
             else
-                status += "Neither the source nor destination channels are configured.";
+                status += " Neither the source nor destination channels are configured.";
 
             await ReplyAsync(status);
         }
@@ -175,10 +171,16 @@ namespace Morgana {
         public async Task CheckPinsForGuild(IGuild guild) {
             var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.DoPins || (gcfg.PinFrom == 0) || (gcfg.PinTo == 0))
+            if (!await gcfg.IsPinnerEnabledAsync())
                 return;
 
-            var fromchannel = await guild.GetTextChannelAsync(gcfg.PinFrom);
+            var fromchanId = await gcfg.GetPinFromAsync();
+            var tochanId = await gcfg.GetPinToAsync();
+
+            if (fromchanId == 0 || tochanId == 0)
+                return;
+
+            var fromchannel = await guild.GetTextChannelAsync(fromchanId);
             var pins = await fromchannel.GetPinnedMessagesAsync();
             foreach (var message in pins) {
                 await ConsiderPinning(guild, message);
@@ -196,16 +198,12 @@ namespace Morgana {
 
         protected async Task ConsiderPinning(IGuild guild, IMessage msg) {
             var gcfg = Vars.GetGuild(guild);
-            if (!gcfg.DoPins || gcfg.PinFrom != msg.Channel.Id)
+
+            if (!await gcfg.IsPinnerEnabledAsync())
                 return;
 
-            if (!(msg is IUserMessage umsg))
-                return;
-
-            if (!msg.IsPinned)
-                return;
-
-            if (msg.Attachments.Count() == 0)
+            var fromchanId = await gcfg.GetPinFromAsync();
+            if (fromchanId != msg.Channel.Id)
                 return;
 
             await pendingChan.Writer.WriteAsync(new PinnedMessage {
@@ -230,7 +228,14 @@ namespace Morgana {
         protected async Task PinMessage(PinnedMessage msg) {
             var guild = Client.GetGuild(msg.GuildID);
             var gcfg = Vars.GetGuild(guild);
-            if (!gcfg.DoPins || (gcfg.PinFrom == 0) || (gcfg.PinTo == 0))
+
+            if (!await gcfg.IsPinnerEnabledAsync())
+                return;
+
+            var fromchanId = await gcfg.GetPinFromAsync();
+            var tochanId = await gcfg.GetPinToAsync();
+
+            if (fromchanId == 0 || tochanId == 0)
                 return;
 
             var channel = Client.GetChannel(msg.ChannelID) as ITextChannel;
@@ -238,7 +243,7 @@ namespace Morgana {
                 return;
 
             var message = await channel.GetMessageAsync(msg.MessageID);
-            if (message.Channel.Id != gcfg.PinFrom)
+            if (message.Channel.Id != fromchanId)
                 return;
             if (!(message is IUserMessage umsg))
                 return;
@@ -249,10 +254,7 @@ namespace Morgana {
             if (umsg.Attachments.Count() == 0)
                 return;
 
-            if (channel.Id != gcfg.PinFrom)
-                return;
-
-            var tochan = guild.GetTextChannel(gcfg.PinTo);
+            var tochan = guild.GetTextChannel(tochanId);
             if (tochan == null)
                 return;
 

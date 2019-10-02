@@ -29,14 +29,15 @@ namespace Morgana {
         [RequireContext(ContextType.Guild)]
         public async Task List() {
             var gcfg = Vars.GetGuild(Context.Guild);
+            var admins = await gcfg.GetAdminsAsync();
 
-            if (gcfg.AdminList.Count() == 0) {
+            if (admins.Count() == 0) {
                 await ReplyAsync("No admins have been configured yet.");
                 return;
             }
 
             var strings = new List<string>();
-            foreach (var admin in gcfg.AdminList) {
+            foreach (var admin in admins) {
                 var guild = (IGuild)Context.Guild;
                 var user = await guild.GetUserAsync(admin);
 
@@ -62,14 +63,15 @@ namespace Morgana {
                 var guild = Context.Guild;
                 var gcfg = Vars.GetGuild(guild);
                 var guilduser = Context.Guild.GetUser(Context.User.Id);
+                var admins = await gcfg.GetAdminsAsync();
 
-                if (gcfg.AdminList.Count() == 0) {
+                if (admins.Count() == 0) {
                     if (!guilduser.GuildPermissions.Administrator) {
                         await ReplyAsync("No admins have been defined yet, so only the server owner can use this command.");
                         return;
                     }
                 } else {
-                    if (!gcfg.IsAdmin(guilduser)) {
+                    if (!await gcfg.IsAdminAsync(guilduser)) {
                         await ReplyAsync("Sorry, only admins can use this command.");
                         return;
                     }
@@ -80,11 +82,10 @@ namespace Morgana {
                     return;
                 }
 
-                if (gcfg.AdminAdd(target))
+                if (await gcfg.AdminAddAsync(target))
                     await ReplyAsync("Done!");
                 else
                     await ReplyAsync("That user is already an admin.");
-                Vars.Save();
             }
         }
 
@@ -100,25 +101,24 @@ namespace Morgana {
             public async Task RemoveUser([Summary("The admin to be removed")] IGuildUser target) {
                 var guild = Context.Guild;
                 var gcfg = Vars.GetGuild(guild);
-                var guilduser = Context.Guild.GetUser(Context.User.Id);
+                var admins = await gcfg.GetAdminsAsync();
 
                 if (target == null) {
                     await ReplyAsync("That user doesn't seem to exist.");
                     return;
                 }
 
-                if (!gcfg.IsAdmin(target)) {
+                if (!await gcfg.IsAdminAsync(target)) {
                     await ReplyAsync("That user is not an admin.");
                     return;
                 }
 
-                if (gcfg.AdminList.Count() == 1) {
+                if (admins.Count() == 1) {
                     await ReplyAsync("You cannot remove the last admin, otherwise there would be none left.");
                     return;
                 }
 
-                gcfg.AdminRemove(target);
-                Vars.Save();
+                await gcfg.AdminRemoveAsync(target);
             }
         }
     }

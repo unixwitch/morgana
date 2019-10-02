@@ -52,7 +52,7 @@ namespace Morgana {
 
             if (Context.Guild != null) {
                 gcfg = Vars.GetGuild(Context.Guild);
-                prefix = gcfg.CommandPrefix ?? "~";
+                prefix = await gcfg.GetCommandPrefixAsync() ?? "~";
             }
 
             if (command == null) {

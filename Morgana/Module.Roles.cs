@@ -44,7 +44,7 @@ namespace Morgana {
                 return;
             }
 
-            if (target != null && !guilduser.GuildPermissions.ManageRoles && !gcfg.IsAdmin(guilduser)) {
+            if (target != null && !guilduser.GuildPermissions.ManageRoles && !await gcfg.IsAdminAsync(guilduser)) {
                 await ReplyAsync("Sorry, you don't have permission to manage roles on this server.");
                 return;
             }
@@ -56,7 +56,7 @@ namespace Morgana {
                 return;
             }
 
-            if (!gcfg.IsManagedrole(role)) {
+            if (!await gcfg.IsManagedRoleAsync(role)) {
                 await ReplyAsync("It is not within my power to bestow that role.");
                 return;
             }
@@ -70,7 +70,6 @@ namespace Morgana {
             }
 
             await target.AddRoleAsync(role);
-            Vars.Save();
             await ReplyAsync("Done!");
         }
 
@@ -88,7 +87,7 @@ namespace Morgana {
             var gcfg = Vars.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 
-            if (target != null && !guilduser.GuildPermissions.ManageRoles && !gcfg.IsAdmin(guilduser)) {
+            if (target != null && !guilduser.GuildPermissions.ManageRoles && !await gcfg.IsAdminAsync(guilduser)) {
                 await ReplyAsync("Sorry, you don't have permission to remove roles from other users.");
                 return;
             }
@@ -108,7 +107,7 @@ namespace Morgana {
                 return;
             }
 
-            if (!gcfg.IsManagedrole(role)) {
+            if (!await gcfg.IsManagedRoleAsync(role)) {
                 await ReplyAsync("It is not within my power to remove that role.");
                 return;
             }
@@ -122,7 +121,6 @@ namespace Morgana {
             }
 
             await target.RemoveRoleAsync(role);
-            Vars.Save();
             await ReplyAsync("Done!");
         }
 
@@ -175,11 +173,10 @@ namespace Morgana {
                 return;
             }
 
-            if (gcfg.ManagedRoleAdd(role))
+            if (await gcfg.ManagedRoleAddAsync(role))
                 await ReplyAsync("Done!");
             else
                 await ReplyAsync("I am already managing that role.");
-            Vars.Save();
         }
 
         [Command("unmanage")]
@@ -206,11 +203,10 @@ namespace Morgana {
                 return;
             }
 
-            if (gcfg.ManagedRoleRemove(role))
+            if (await gcfg.ManagedRoleRemoveAsync(role))
                 await ReplyAsync("Done!");
             else
                 await ReplyAsync("I am not managing that role.");
-            Vars.Save();
         }
 
         [Command("list")]
@@ -221,15 +217,15 @@ namespace Morgana {
             var gcfg = Vars.GetGuild(Context.Guild);
 
             var strings = new List<string>();
+            var roles = await gcfg.GetManagedRolesAsync();
 
-            foreach (var roleId in gcfg.ManagedRoleList) {
-                IRole role;
-                try {
-                    role = Context.Guild.Roles.First(r => r.Id == roleId);
-                    strings.Add(role.Name);
-                } catch (InvalidOperationException) {
-                }
+            if (!roles.Any()) {
+                await ReplyAsync("I am powerless to bestow any roles.");
+                return;
             }
+
+            foreach (var role in await gcfg.GetManagedRolesAsync())
+                strings.Add(role.Name);
 
             var list = Format.Sanitize(String.Join(", ", strings));
             await ReplyAsync($"I can bestow these roles: {list}.");

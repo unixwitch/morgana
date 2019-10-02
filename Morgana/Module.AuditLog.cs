@@ -33,11 +33,9 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Channel(ITextChannel channel) {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
 
-            gcfg.AuditChannel = channel.Id;
-            Vars.Save();
+            await gcfg.SetAuditChannelAsync(channel.Id);
             await ReplyAsync("Done!");
         }
 
@@ -47,21 +45,21 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Enable() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
 
-            if (gcfg.AuditEnabled) {
-                if (gcfg.AuditChannel == 0)
+            var chan = await gcfg.GetAuditChannelAsync();
+
+            if (await gcfg.IsAuditEnabledAsync()) {
+                if (chan == 0)
                     await ReplyAsync("The audit log is already enabled, but it won't work until a channel is configured.");
                 else
                     await ReplyAsync("The audit log is already enabled.");
                 return;
             }
 
-            gcfg.AuditEnabled = true;
-            Vars.Save();
+            await gcfg.SetAuditEnabledAsync(true);
 
-            if (gcfg.AuditChannel == 0)
+            if (chan == 0)
                 await ReplyAsync("The audit log is now enabled, but it won't work until a channel is configured.");
             else
                 await ReplyAsync("The audit log is now enabled.");
@@ -75,13 +73,12 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.AuditEnabled) {
+            if (!await gcfg.IsAuditEnabledAsync()) {
                 await ReplyAsync("The audit log is already disabled.");
                 return;
             }
 
-            gcfg.AuditEnabled = false;
-            Vars.Save();
+            await gcfg.SetAuditEnabledAsync(false);
             await ReplyAsync("The audit log is now disabled.");
         }
 
@@ -91,15 +88,17 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Status() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
 
-            var message = "The audit log is " + (gcfg.AuditEnabled ? "enabled." : "disabled.");
-            if (gcfg.AuditChannel == 0)
+            var enabled = await gcfg.IsAuditEnabledAsync();
+            var chan = await gcfg.GetAuditChannelAsync();
+
+            var message = "The audit log is " + (enabled ? "enabled." : "disabled.");
+            if (chan == 0)
                 message += "  No channel has been configured.";
             else {
-                var channel = guild.GetChannel(gcfg.AuditChannel);
-                message += $"  The log will be sent to {channel}.";
+                var channel = guild.GetChannel(chan);
+                message += $"  The log will be sent to {MentionUtils.MentionChannel(channel.Id)}.";
             }
 
             await ReplyAsync(message);
@@ -125,14 +124,30 @@ namespace Morgana {
             return Task.CompletedTask;
         }
 
-        public async Task GuildMemberUpdatedAsync(SocketGuildUser before, SocketGuildUser after) {
-            var guild = before.Guild;
+        protected async Task<ITextChannel> GetAuditChannelForGuildAsync(SocketGuild guild) {
             var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
-                return;
+            var enabled = await gcfg.IsAuditEnabledAsync();
+            if (!enabled)
+                return null;
 
-            var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
+            var chan = await gcfg.GetAuditChannelAsync();
+            if (chan == 0)
+                return null;
+
+            var auditchannel = guild.GetTextChannel(chan);
+            if (auditchannel == null)
+                return null;
+
+            return auditchannel;
+        }
+
+        public async Task GuildMemberUpdatedAsync(SocketGuildUser before, SocketGuildUser after) {
+            var guild = before.Guild;
+
+            var auditchannel = await GetAuditChannelForGuildAsync(guild);
+            if (auditchannel == null)
+                return;
 
             if (before.Nickname != after.Nickname) {
                 await auditchannel.SendMessageAsync(embed:
@@ -159,9 +174,9 @@ namespace Morgana {
 
         public async Task UserJoinedAsync(SocketGuildUser user) {
             var guild = user.Guild;
-            var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
+            var auditchannel = await GetAuditChannelForGuildAsync(guild);
+            if (auditchannel == null)
                 return;
 
             var embed =
@@ -171,7 +186,6 @@ namespace Morgana {
                     .WithFooter($"User ID: {user.Id}")
                     .Build();
 
-            var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
             await auditchannel.SendMessageAsync(embed: embed);
         }
 
@@ -179,12 +193,12 @@ namespace Morgana {
             var guild = user.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (gcfg.IsAdmin(user.Id)) {
-                gcfg.AdminRemove(user.Id);
-                Vars.Save();
+            if (await gcfg.IsAdminAsync(user)) {
+                await gcfg.AdminRemoveAsync(user);
             }
 
-            if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
+            var auditchannel = await GetAuditChannelForGuildAsync(guild);
+            if (auditchannel == null)
                 return;
 
             var embed =
@@ -194,22 +208,20 @@ namespace Morgana {
                     .WithFooter($"User ID: {user.Id}")
                     .Build();
 
-            var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
             await auditchannel.SendMessageAsync(embed: embed);
         }
 
         public async Task UserBannedAsync(SocketUser user, SocketGuild guild) {
             var gcfg = Vars.GetGuild(guild);
 
-            if (gcfg.IsAdmin(user.Id)) {
-                gcfg.AdminRemove(user.Id);
-                Vars.Save();
+            if (await gcfg.IsAdminAsync(user)) {
+                await gcfg.AdminRemoveAsync(user);
             }
 
-            if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
+            var auditchannel = await GetAuditChannelForGuildAsync(guild);
+            if (auditchannel == null)
                 return;
 
-            var usertext = $"{user.Username}#{user.Discriminator} [{user.Id}]";
             var embed =
                 new EmbedBuilder()
                     .WithAuthor(user)
@@ -217,24 +229,22 @@ namespace Morgana {
                     .WithFooter($"User ID: {user.Id}")
                     .Build();
 
-            var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
             await auditchannel.SendMessageAsync(embed: embed);
         }
 
         public async Task MessageDeletedAsync(Cacheable<IMessage, ulong> msg, ISocketMessageChannel ichannel) {
             var message = await msg.GetOrDownloadAsync();
 
-            if (message == null)
-                return;
-
-            var channel = message.Channel as SocketGuildChannel;
-            if (channel == null)
+            if (!(message.Channel is SocketGuildChannel channel))
                 return;
 
             var guild = channel.Guild;
-            var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
+            var auditchannel = await GetAuditChannelForGuildAsync(guild);
+            if (auditchannel == null)
+                return;
+
+            if (message == null)
                 return;
 
             if (message.Author.Id == Client.CurrentUser.Id)
@@ -244,8 +254,6 @@ namespace Morgana {
             foreach (var att in message.Attachments)
                 beforetext += "\n" + att.Url;
 
-            var user = $"{message.Author.Username}#{message.Author.Discriminator} [{message.Author.Id}]";
-
             var embed =
                 new EmbedBuilder()
                     .WithAuthor(message.Author)
@@ -254,7 +262,6 @@ namespace Morgana {
                     .WithFooter($"User ID: {message.Author.Id}")
                     .Build();
 
-            var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
             await auditchannel.SendMessageAsync(embed: embed);
         }
 
@@ -272,10 +279,10 @@ namespace Morgana {
                 return;
 
             var guild = channel.Guild;
-            var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.AuditEnabled || gcfg.AuditChannel == 0)
+            var auditchannel = await GetAuditChannelForGuildAsync(guild);
+            if (auditchannel == null)
                 return;
+
 
             if (beforeMessage.Author.Id == Client.CurrentUser.Id)
                 return;
@@ -292,8 +299,6 @@ namespace Morgana {
             if (aftertext.Length > 900)
                 aftertext = aftertext.Substring(0, 900);
 
-            var channelName = after.Channel.ToString();
-
             var embed =
                 new EmbedBuilder()
                     .WithAuthor(beforeMessage.Author)
@@ -303,7 +308,6 @@ namespace Morgana {
                     .WithFooter($"User ID: {after.Author.Id}")
                     .Build();
 
-            var auditchannel = guild.GetTextChannel(gcfg.AuditChannel);
             await auditchannel.SendMessageAsync(embed: embed);
         }
     }

@@ -33,13 +33,14 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (gcfg.BadwordsList.Count() == 0) {
+            var words = await gcfg.GetBadwordsAsync();
+            if (!words.Any()) {
                 await ReplyAsync("No bad words are configured.");
                 return;
             }
 
-            var words = String.Join(", ", gcfg.BadwordsList.Select(x => $"`{Format.Sanitize(x)}`"));
-            await ReplyAsync($"Current bad words list: {words}.");
+            var str = String.Join(", ", words.Select(x => $"`{Format.Sanitize(x)}`"));
+            await ReplyAsync($"Current bad words list: {str}.");
         }
 
         [Command("add")]
@@ -54,13 +55,11 @@ namespace Morgana {
             int added = 0;
 
             foreach (var word in words) {
-                if (gcfg.BadwordAdd(word))
+                if (await gcfg.BadwordAddAsync(word))
                     added++;
                 else
                     existing.Add(word);
             }
-
-            Vars.Save();
 
             if (existing.Count() == 0)
                 await ReplyAsync("Done!");
@@ -82,13 +81,11 @@ namespace Morgana {
             int removed = 0;
 
             foreach (var word in words) {
-                if (gcfg.BadwordRemove(word))
+                if (await gcfg.BadwordRemoveAsync(word))
                     removed++;
                 else
                     notfound.Add(word);
             }
-
-            Vars.Save();
 
             if (notfound.Count() == 0)
                 await ReplyAsync("Done!");
@@ -106,13 +103,12 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (gcfg.BadwordsEnabled) {
+            if (await gcfg.IsBadwordsEnabledAsync()) {
                 await ReplyAsync("The bad words filter is already enabled.");
                 return;
             }
 
-            gcfg.BadwordsEnabled = true;
-            Vars.Save();
+            await gcfg.SetBadwordsEnabledAsync(true);
             await ReplyAsync("The bad words filter is now enabled.");
         }
 
@@ -124,13 +120,12 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.BadwordsEnabled) {
+            if (!await gcfg.IsBadwordsEnabledAsync()) {
                 await ReplyAsync("The bad words filter is already disabled.");
                 return;
             }
 
-            gcfg.BadwordsEnabled = false;
-            Vars.Save();
+            await gcfg.SetBadwordsEnabledAsync(true);
             await ReplyAsync("The bad words filter is now disabled.");
         }
 
@@ -142,26 +137,27 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            await ReplyAsync("The bad words filter is " + (gcfg.BadwordsEnabled ? "enabled." : "disabled."));
+            await ReplyAsync("The bad words filter is " + (await gcfg.IsBadwordsEnabledAsync() ? "enabled." : "disabled."));
         }
 
         [Command("message")]
         [Summary("Set the message used to admonish a user")]
         [RequireContext(ContextType.Guild)]
         [RequireBotAdmin]
-        public async Task Message([Summary("The message text; use <user> to tag the username")] string message = null) {
+        public async Task Message([Summary("The message text; use <user> to tag the username")][Remainder] string message = null) {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
             if (message == null) {
-                if (gcfg.BadwordsMessage == null)
+                var msg = await gcfg.GetBadwordsMessageAsync();
+                if (msg == null)
                     await ReplyAsync("No badwords message is set.");
                 else
-                    await ReplyAsync("The current badwords message is: " + gcfg.BadwordsMessage);
+                    await ReplyAsync("The current badwords message is: " + msg);
                 return;
             }
-            gcfg.BadwordsMessage = message;
-            Vars.Save();
+
+            await gcfg.SetBadwordsMessageAsync(message);
             await ReplyAsync("Done!");
         }
     }
@@ -195,31 +191,29 @@ namespace Morgana {
                 return false;
 
             var gcfg = Vars.GetGuild(channel.Guild);
-            if (!gcfg.BadwordsEnabled)
+            if (!await gcfg.IsBadwordsEnabledAsync())
                 return false;
 
-            var bw = gcfg.CommandPrefix + "badwords";
+            var bw = await gcfg.GetCommandPrefixAsync() + "badwords";
             if (message.Content.StartsWith(bw))
                 return false;
 
-            if (gcfg.IsAdmin(guilduser.Id))
+            if (await gcfg.IsAdminAsync(guilduser))
                 return false;
 
             var re = new Regex(@"\b");
             var words = re.Split(message.Content);
 
-            foreach (var word in words) {
-                if (gcfg.IsBadword(word)) {
-                    await message.DeleteAsync();
+            if (await gcfg.IsAnyBadwordAsync(words)) {
+                await message.DeleteAsync();
 
-                    var msg = gcfg.BadwordsMessage;
-                    if (msg == null)
-                        msg = "<user>, please refrain from swearing on this server.  Thanks!";
+                var msg = await gcfg.GetBadwordsMessageAsync();
+                if (msg == null)
+                    msg = "<user>, please refrain from swearing on this server.  Thanks!";
 
-                    msg = msg.Replace("<user>", message.Author.Mention);
-                    await message.Channel.SendMessageAsync(msg);
-                    return true;
-                }
+                msg = msg.Replace("<user>", message.Author.Mention);
+                await message.Channel.SendMessageAsync(msg);
+                return true;
             }
 
             return false;

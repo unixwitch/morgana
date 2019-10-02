@@ -62,15 +62,14 @@ namespace Morgana {
             var channel = message.Channel as SocketGuildChannel;
             if (channel != null) {
                 var gcfg = _config.GetGuild(channel.Guild);
-                if (gcfg.CommandPrefix == null)
-                    gcfg.CommandPrefix = "~";
+                var pfx = await gcfg.GetCommandPrefixAsync() ?? "~";
 
                 // If the command prefix is doubled, ignore it.  This avoids responding to formatting at
                 // the start of the line, e.g. ~~ or **.
-                if (gcfg.CommandPrefix.Length == 1 && message.Content.Length >= 2 && message.Content[1] == gcfg.CommandPrefix[0])
+                if (pfx.Length == 1 && message.Content.Length >= 2 && message.Content[1] == pfx[0])
                     return;
 
-                if (!(message.HasStringPrefix(gcfg.CommandPrefix, ref argpos)) || message.HasMentionPrefix(_client.CurrentUser, ref argpos))
+                if (!(message.HasStringPrefix(pfx, ref argpos)) || message.HasMentionPrefix(_client.CurrentUser, ref argpos))
                     return;
             }
 

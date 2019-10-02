@@ -18,6 +18,8 @@ using Discord.Commands;
 using Discord.WebSocket;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 
 namespace Morgana {
     public class RequireBotAdminAttribute : PreconditionAttribute {
@@ -28,7 +30,7 @@ namespace Morgana {
             var config = services.GetRequiredService<Storage>();
             var gcfg = config.GetGuild(context.Guild);
 
-            if (!gcfg.IsAdmin(context.User.Id))
+            if (!await gcfg.IsAdminAsync(context.User))
                 return await Task.FromResult(PreconditionResult.FromError("This command can only be used by bot administrators."));
 
             return await Task.FromResult(PreconditionResult.FromSuccess());
@@ -56,6 +58,7 @@ namespace Morgana {
 
             using (var services =
                 new ServiceCollection()
+                    .AddDbContext<StorageContext>(options => _config.ConfigureDb(options))
                     .AddSingleton<DiscordSocketClient>(client)
                     .AddSingleton<CommandService>()
                     .AddSingleton<CommandHandler>()

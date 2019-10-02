@@ -20,271 +20,326 @@ using System.IO;
 using Newtonsoft.Json;
 using Discord;
 using System.Threading;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using Microsoft.EntityFrameworkCore.Design;
 
 namespace Morgana {
-    public class GuildConfig {
-        [JsonProperty("Admins")]
-        private HashSet<ulong> _admins = new HashSet<ulong>();
-        [JsonIgnore]
-        public HashSet<ulong> AdminList {
-            get {
-                lock (_mutex) {
-                    return new HashSet<ulong>(_admins);
-                }
-            }
-        }
+    public class StorageContext : DbContext {
+        public DbSet<GuildAdmin> GuildAdmins { get; set; }
+        public DbSet<GuildOption> GuildOptions { get; set; }
+        public DbSet<GuildManagedRole> GuildManagedRoles { get; set; }
+        public DbSet<GuildBadword> GuildBadwords { get; set; }
 
+        public StorageContext(DbContextOptions<StorageContext> options) : base(options) { }
 
-        [JsonProperty("ManagedRoles")]
-        private HashSet<ulong> _managedRoles = new HashSet<ulong>();
-        [JsonIgnore]
-        public HashSet<ulong> ManagedRoleList {
-            get {
-                lock (_mutex) {
-                    return _managedRoles;
-                }
-            }
-        }
-
-        [JsonProperty("CommandPrefix")]
-        private string _commandPrefix;
-        [JsonIgnore]
-        public string CommandPrefix {
-            get {
-                lock (_mutex) {
-                    return _commandPrefix;
-                }
-            }
-            set {
-                lock (_mutex) {
-                    _commandPrefix = value;
-                }
-            }
-        }
-
-        [JsonProperty("Badwords")]
-        private HashSet<string> _badwords = new HashSet<string>();
-        [JsonIgnore]
-        public HashSet<string> BadwordsList {
-            get {
-                lock (_mutex) {
-                    return new HashSet<string>(_badwords);
-                }
-            }
-        }
-
-        [JsonProperty("BadwordsEnabled")]
-        private bool _badwordsEnabled = true;
-        [JsonIgnore]
-        public bool BadwordsEnabled {
-            get {
-                lock (_mutex) {
-                    return _badwordsEnabled;
-                }
-            }
-            set {
-                lock (_mutex) {
-                    _badwordsEnabled = value;
-                }
-            }
-        }
-
-        [JsonProperty("BadwordsMessage")]
-        private string _badwordsMessage;
-        [JsonIgnore]
-        public string BadwordsMessage {
-            get {
-                lock (_mutex) {
-                    return _badwordsMessage;
-                }
-            }
-            set {
-                lock (_mutex) {
-                    _badwordsMessage = value;
-                }
-            }
-        }
-
-        [JsonProperty("AuditEnabled")]
-        private bool _auditEnabled = false;
-        [JsonIgnore]
-        public bool AuditEnabled {
-            get {
-                lock (_mutex) {
-                    return _auditEnabled;
-                }
-            }
-            set {
-                lock (_mutex) {
-                    _auditEnabled = value;
-                }
-            }
-        }
-
-        [JsonProperty("AuditChannel")]
-        private ulong _auditChannel = 0;
-
-        [JsonIgnore]
-        public ulong AuditChannel {
-            get {
-                lock (_mutex) {
-                    return _auditChannel;
-                }
-            }
-            set {
-                lock (_mutex) {
-                    _auditChannel = value;
-                }
-            }
-        }
-
-        [JsonProperty("PinFrom")]
-        private ulong _pinFrom = 0;
-        [JsonIgnore]
-        public ulong PinFrom {
-            get {
-                lock (_mutex) {
-                    return _pinFrom;
-                }
-            }
-            set {
-                lock (_mutex) {
-                    _pinFrom = value;
-                }
-            }
-        }
-
-        [JsonProperty("PinTo")]
-        private ulong _pinTo = 0;
-        [JsonIgnore]
-        public ulong PinTo {
-            get {
-                lock (_mutex) {
-                    return _pinTo;
-                }
-            }
-            set {
-                lock (_mutex) {
-                    _pinTo = value;
-                }
-            }
-        }
-
-        [JsonProperty("DoPins")]
-        private bool _doPins = false;
-        [JsonIgnore]
-        public bool DoPins {
-            get {
-                lock (_mutex) {
-                    return _doPins;
-                }
-            }
-            set {
-                lock (_mutex) {
-                    _doPins = value;
-                }
-            }
-        }
-
-        internal Mutex _mutex = new Mutex();
-
-        public bool AdminAdd(ulong id) {
-            lock (_mutex) {
-                return _admins.Add(id);
-            }
-        }
-        public bool AdminAdd(IGuildUser user) {
-            return AdminAdd(user.Id);
-        }
-
-        public bool AdminRemove(ulong id) {
-            lock (_mutex) {
-                return _admins.Remove(id);
-            }
-        }
-        public bool AdminRemove(IGuildUser user) {
-            return AdminRemove(user.Id);
-        }
-
-        public bool IsAdmin(ulong id) {
-            lock (_mutex) {
-                return _admins.Contains(id);
-            }
-        }
-        public bool IsAdmin(IGuildUser user) {
-            return IsAdmin(user.Id);
-        }
-
-        public bool ManagedRoleAdd(IRole role) {
-            lock (_mutex) {
-                return _managedRoles.Add(role.Id);
-            }
-        }
-
-        public bool ManagedRoleRemove(IRole role) {
-            lock (_mutex) {
-                return _managedRoles.Remove(role.Id);
-            }
-        }
-
-        public bool IsManagedrole(IRole role) {
-            lock (_mutex) {
-                return _managedRoles.Contains(role.Id);
-            }
-        }
-
-        public bool BadwordAdd(string word) {
-            lock (_mutex) {
-                return _badwords.Add(word);
-            }
-        }
-
-        public bool BadwordRemove(string word) {
-            lock (_mutex) {
-                return _badwords.Remove(word);
-            }
-        }
-
-        public bool IsBadword(string word) {
-            lock (_mutex) {
-                return _badwords.Contains(word);
-            }
+        protected override void OnModelCreating(ModelBuilder mb) {
+            mb.Entity<GuildAdmin>().HasIndex(ga => new { ga.GuildId, ga.AdminId }).IsUnique();
+            mb.Entity<GuildOption>().HasIndex(go => new { go.GuildId, go.Option }).IsUnique();
+            mb.Entity<GuildManagedRole>().HasIndex(gmr => new { gmr.GuildId, gmr.RoleId }).IsUnique();
+            mb.Entity<GuildBadword>().HasIndex(gbw => new { gbw.GuildId, gbw.Badword }).IsUnique();
         }
     }
 
-    public class DataStore {
-        public Dictionary<ulong, GuildConfig> Guilds { get; set; } = new Dictionary<ulong, GuildConfig>();
+    public class StorageContextFactory : IDesignTimeDbContextFactory<StorageContext> {
+        public StorageContext CreateDbContext(string[] args) {
+            var _config = Configuration.Load(Path.Join(Directory.GetCurrentDirectory(), "config.ini"));
+            var options = new DbContextOptionsBuilder<StorageContext>();
+            _config.ConfigureDb(options);
+            return new StorageContext(options.Options);
+        }
+    }
+
+    public class GuildAdmin {
+        public ulong GuildAdminId { get; set; }
+
+        [Required]
+        public ulong GuildId { get; set; }
+
+        [Required]
+        public ulong AdminId { get; set; }
+    }
+
+    public class GuildOption {
+        public ulong GuildOptionId { get; set; }
+
+        [Required]
+        public ulong GuildId { get; set; }
+
+        [Required]
+        public string Option { get; set; }
+
+        [Required]
+        public string Value { get; set; }
+    }
+
+    public class GuildManagedRole {
+        public ulong GuildManagedroleId { get; set; }
+
+        [Required]
+        public ulong GuildId { get; set; }
+
+        [Required]
+        public ulong RoleId { get; set; }
+    }
+
+    public class GuildBadword {
+        public ulong GuildBadwordId { get; set; }
+
+        [Required]
+        public ulong GuildId { get; set; }
+
+        [Required]
+        public string Badword { get; set; }
+    }
+
+    public class GuildConfig {
+        private StorageContext _db;
+        private IGuild _guild;
+
+        public GuildConfig(StorageContext db, IGuild guild) {
+            _db = db;
+            _guild = guild;
+        }
+
+        /*
+         * Internal option handling.
+         */
+        protected async Task<string> GetOptionAsync(string option) {
+            try {
+                var opt = await _db.GuildOptions.Where(opt => opt.GuildId == _guild.Id && opt.Option == option).SingleAsync();
+                return opt.Value;
+            } catch (InvalidOperationException) {
+                return null;
+            }
+        }
+
+        protected async Task SetOptionAsync(string option, string value) {
+            GuildOption opt;
+
+            try {
+                opt = _db.GuildOptions.Where(opt => opt.GuildId == _guild.Id && opt.Option == option).Single();
+                opt.Value = value;
+            } catch (InvalidOperationException) {
+                opt = new GuildOption { GuildId = _guild.Id, Option = option, Value = value };
+                _db.GuildOptions.Add(opt);
+            }
+
+            await _db.SaveChangesAsync();
+        }
+
+        protected async Task<bool> GetOptionBoolOrTrue(string option) {
+            var v = await GetOptionAsync(option);
+            if (v == null)
+                return true;
+
+            if (v != null && v == "true")
+                return true;
+
+            return false;
+        }
+
+        protected async Task<bool> GetOptionBoolOrFalse(string option) {
+            var v = await GetOptionAsync(option);
+            if (v == null)
+                return false;
+
+            if (v != null && v == "true")
+                return true;
+
+            return false;
+        }
+
+        protected Task SetOptionBoolAsync(string option, bool value) {
+            return SetOptionAsync(option, value ? "true" : "false");
+        }
+
+        /*
+         * Admins.
+         */
+        public Task<List<ulong>> GetAdminsAsync() {
+            return
+                _db.GuildAdmins
+                    .Where(ga => ga.GuildId == _guild.Id)
+                    .Select(ga => ga.AdminId)
+                    .ToListAsync();
+        }
+
+        public async Task<bool> AdminAddAsync(ulong id) {
+            if (await IsAdminAsync(id))
+                return false;
+
+            var o = new GuildAdmin { GuildId = _guild.Id, AdminId = id };
+            _db.GuildAdmins.Add(o);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public Task<bool> AdminAddAsync(IGuildUser user) => AdminAddAsync(user.Id);
+
+        public async Task<bool> AdminRemoveAsync(ulong id) {
+            GuildAdmin ga = null;
+
+            try {
+                ga = await _db.GuildAdmins.Where(a => a.GuildId == _guild.Id && a.AdminId == id).SingleAsync();
+            } catch (InvalidOperationException) {
+                return false;
+            }
+
+            _db.GuildAdmins.Remove(ga);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public Task<bool> AdminRemoveAsync(IUser user) => AdminRemoveAsync(user.Id);
+
+        public async Task<bool> IsAdminAsync(ulong id) {
+            try {
+                await _db.GuildAdmins.Where(a => a.GuildId == _guild.Id && a.AdminId == id).SingleAsync();
+                return true;
+            } catch (InvalidOperationException) {
+                return false;
+            }
+        }
+
+        public Task<bool> IsAdminAsync(IUser user) => IsAdminAsync(user.Id);
+
+        /*
+         * Managed roles.
+         */
+        public Task<List<IRole>> GetManagedRolesAsync() {
+            return
+                _db.GuildManagedRoles
+                    .Where(mr => mr.GuildId == _guild.Id)
+                    .Select(mr => _guild.GetRole(mr.RoleId))
+                    .ToListAsync();
+        }
+
+        public async Task<bool> ManagedRoleAddAsync(IRole role) {
+            if (await IsManagedRoleAsync(role))
+                return false;
+
+            var o = new GuildManagedRole { GuildId = _guild.Id, RoleId = role.Id };
+            _db.GuildManagedRoles.Add(o);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ManagedRoleRemoveAsync(IRole role) {
+            GuildManagedRole ga = null;
+
+            try {
+                ga = await _db.GuildManagedRoles.Where(a => a.GuildId == _guild.Id && a.RoleId == role.Id).SingleAsync();
+            } catch (InvalidOperationException) {
+                return false;
+            }
+
+            _db.GuildManagedRoles.Remove(ga);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> IsManagedRoleAsync(IRole role) {
+            try {
+                await _db.GuildManagedRoles.Where(a => a.GuildId == _guild.Id && a.RoleId == role.Id).SingleAsync();
+                return true;
+            } catch (InvalidOperationException) {
+                return false;
+            }
+        }
+
+        /*
+         * General guild options.
+         */
+        public Task<string> GetCommandPrefixAsync() => GetOptionAsync("commandprefix");
+        public Task SetCommandPrefixAsync(string p) => SetOptionAsync("commandprefix", p);
+
+        /*
+         * Badwords filter.
+         */
+        public Task<List<string>> GetBadwordsAsync() {
+            return _db.GuildBadwords.Where(bw => bw.GuildId == _guild.Id).Select(bw => bw.Badword).ToListAsync();
+        }
+
+        public Task<bool> IsBadwordsEnabledAsync() => GetOptionBoolOrFalse("badwords-enabled");
+        public Task SetBadwordsEnabledAsync(bool v) => SetOptionBoolAsync("badwords-enabled", v);
+
+        public Task<string> GetBadwordsMessageAsync() => GetOptionAsync("badwords-message");
+        public Task SetBadwordsMessageAsync(string m) => SetOptionAsync("badwords-message", m);
+
+        public async Task<bool> BadwordAddAsync(string w) {
+            if (await IsBadwordAsync(w))
+                return false;
+
+            var o = new GuildBadword { GuildId = _guild.Id, Badword = w };
+            _db.GuildBadwords.Add(o);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> BadwordRemoveAsync(string w) {
+            GuildBadword ga = null;
+
+            try {
+                ga = await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id && a.Badword == w).SingleAsync();
+            } catch (InvalidOperationException) {
+                return false;
+            }
+
+            _db.GuildBadwords.Remove(ga);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> IsBadwordAsync(string w) {
+            try {
+                await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id && a.Badword == w).SingleAsync();
+                return true;
+            } catch (InvalidOperationException) {
+                return false;
+            }
+        }
+
+        public async Task<bool> IsAnyBadwordAsync(string[] w) {
+            return await _db.GuildBadwords.Where(bw => w.Contains(bw.Badword)).AnyAsync();
+        }
+
+        /*
+         * Audit log.
+         */
+        public Task<bool> IsAuditEnabledAsync() => GetOptionBoolOrFalse("audit-enabled");
+        public Task SetAuditEnabledAsync(bool v) => SetOptionBoolAsync("audit-enabled", v);
+
+        public async Task<ulong> GetAuditChannelAsync() => ulong.Parse(await GetOptionAsync("audit-channel") ?? "0");
+        public Task SetAuditChannelAsync(ulong c) => SetOptionAsync("audit-channel", c.ToString());
+
+        /*
+         * Picture pinner.
+         */
+        public async Task<ulong> GetPinFromAsync() => ulong.Parse(await GetOptionAsync("pin-from") ?? "0");
+        public Task SetPinFromAsync(ulong c) => SetOptionAsync("pin-from", c.ToString());
+
+        public async Task<ulong> GetPinToAsync() => ulong.Parse(await GetOptionAsync("pin-to") ?? "0");
+        public Task SetPinToAsync(ulong c) => SetOptionAsync("pin-to", c.ToString());
+
+        public Task<bool> IsPinnerEnabledAsync() => GetOptionBoolOrFalse("pin-enabled");
+        public Task SetPinnerEnabledAsync(bool v) => SetOptionBoolAsync("pin-enabled", v);
     }
 
     public class Storage {
-        DataStore store = new DataStore();
-        private Mutex _mutex = new Mutex();
+        private StorageContext _db;
 
-        public Storage() {
-            Load();
-        }
-
-        public void Save() {
-            lock (_mutex) {
-                File.WriteAllText("vars.json", JsonConvert.SerializeObject(store));
-            }
-        }
-
-        public void Load() {
-            if (File.Exists("vars.json"))
-                store = JsonConvert.DeserializeObject<DataStore>(File.ReadAllText("vars.json"));
+        public Storage(StorageContext db) {
+            _db = db;
         }
 
         /*
          * Return the config for a specific guild.
          */
         public GuildConfig GetGuild(IGuild guild) {
-            if (store.Guilds.TryGetValue(guild.Id, out GuildConfig cfg))
-                return cfg;
-
-            cfg = new GuildConfig();
-            store.Guilds.Add(guild.Id, cfg);
-            return cfg;
+            return new GuildConfig(_db, guild);
         }
     }
 }

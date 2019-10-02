@@ -150,7 +150,7 @@ namespace Morgana {
             var gcfg = Vars.GetGuild(Context.Guild);
 
             target ??= Context.User as IGuildUser;
-            if (target.Id != Context.User.Id && !gcfg.IsAdmin(Context.User.Id)) {
+            if (target.Id != Context.User.Id && !await gcfg.IsAdminAsync(Context.User)) {
                 await ReplyAsync("Sorry, only admins can see another user's info.");
                 return;
             }

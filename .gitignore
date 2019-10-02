@@ -3,3 +3,4 @@
 /.vs
 vars.json
 config.ini
+*.db
