@@ -2,7 +2,7 @@
 
 namespace Morgana.Migrations
 {
-    public partial class InitialCreate : Migration
+    public partial class initial : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -10,21 +10,21 @@ namespace Morgana.Migrations
                 name: "GuildAdmins",
                 columns: table => new
                 {
-                    GuildAdminId = table.Column<ulong>(nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    GuildId = table.Column<ulong>(nullable: false),
-                    AdminId = table.Column<ulong>(nullable: false)
+                    GuildId = table.Column<string>(nullable: false),
+                    AdminId = table.Column<string>(nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_GuildAdmins", x => x.GuildAdminId);
+                    table.PrimaryKey("PK_GuildAdmins", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "GuildBadwords",
                 columns: table => new
                 {
-                    GuildBadwordId = table.Column<ulong>(nullable: false)
+                    GuildBadwordId = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     GuildId = table.Column<ulong>(nullable: false),
                     Badword = table.Column<string>(nullable: false)
@@ -38,29 +38,29 @@ namespace Morgana.Migrations
                 name: "GuildManagedRoles",
                 columns: table => new
                 {
-                    GuildManagedroleId = table.Column<ulong>(nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    GuildId = table.Column<ulong>(nullable: false),
-                    RoleId = table.Column<ulong>(nullable: false)
+                    GuildId = table.Column<string>(nullable: false),
+                    RoleId = table.Column<string>(nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_GuildManagedRoles", x => x.GuildManagedroleId);
+                    table.PrimaryKey("PK_GuildManagedRoles", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "GuildOptions",
                 columns: table => new
                 {
-                    GuildOptionId = table.Column<ulong>(nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    GuildId = table.Column<ulong>(nullable: false),
+                    GuildId = table.Column<string>(nullable: false),
                     Option = table.Column<string>(nullable: false),
                     Value = table.Column<string>(nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_GuildOptions", x => x.GuildOptionId);
+                    table.PrimaryKey("PK_GuildOptions", x => x.Id);
                 });
 
             migrationBuilder.CreateIndex(

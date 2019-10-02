@@ -17,17 +17,19 @@ namespace Morgana.Migrations
 
             modelBuilder.Entity("Morgana.GuildAdmin", b =>
                 {
-                    b.Property<ulong>("GuildAdminId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<ulong>("AdminId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("AdminId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
-                    b.Property<ulong>("GuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("GuildId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
-                    b.HasKey("GuildAdminId");
+                    b.HasKey("Id");
 
                     b.HasIndex("GuildId", "AdminId")
                         .IsUnique();
@@ -37,7 +39,7 @@ namespace Morgana.Migrations
 
             modelBuilder.Entity("Morgana.GuildBadword", b =>
                 {
-                    b.Property<ulong>("GuildBadwordId")
+                    b.Property<int>("GuildBadwordId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -58,17 +60,19 @@ namespace Morgana.Migrations
 
             modelBuilder.Entity("Morgana.GuildManagedRole", b =>
                 {
-                    b.Property<ulong>("GuildManagedroleId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<ulong>("GuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("GuildId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
-                    b.Property<ulong>("RoleId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("RoleId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
-                    b.HasKey("GuildManagedroleId");
+                    b.HasKey("Id");
 
                     b.HasIndex("GuildId", "RoleId")
                         .IsUnique();
@@ -78,12 +82,13 @@ namespace Morgana.Migrations
 
             modelBuilder.Entity("Morgana.GuildOption", b =>
                 {
-                    b.Property<ulong>("GuildOptionId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<ulong>("GuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("GuildId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Option")
                         .IsRequired()
@@ -93,7 +98,7 @@ namespace Morgana.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("GuildOptionId");
+                    b.HasKey("Id");
 
                     b.HasIndex("GuildId", "Option")
                         .IsUnique();
