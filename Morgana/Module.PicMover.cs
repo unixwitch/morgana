@@ -116,7 +116,7 @@ namespace Morgana {
             }
 
             if (!gcfg.DoPins)
-                await ReplyAsync("The pinned picture mover not enabled on this server.");
+                await ReplyAsync("The pinned picture is mover not enabled on this server.");
             else {
                 await ReplyAsync("Okay, I'll take a look.");
                 await Mover.CheckPinsForGuild(guild);
