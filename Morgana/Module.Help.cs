@@ -17,11 +17,30 @@ using Discord.Commands;
 using Discord.WebSocket;
 using System.Linq;
 using Discord;
+using System.Windows.Input;
 
 namespace Morgana {
     public class HelpModule : ModuleBase<SocketCommandContext> {
         public CommandService Commands { get; set; }
         public Storage Vars { get; set; }
+        public IServiceProvider Services { get; set; }
+
+        public async Task<bool> UserCanRunCommand(ICommandContext ctx, CommandInfo command) {
+            var res = await command.CheckPreconditionsAsync(ctx, Services);
+            return res.IsSuccess;
+        }
+
+        public async Task<bool> UserCanRunModule(ICommandContext ctx, ModuleInfo mod) {
+            foreach (var cmd in mod.Commands)
+                if (await UserCanRunCommand(ctx, cmd))
+                    return true;
+
+            foreach (var submod in mod.Submodules)
+                if (await UserCanRunModule(ctx, submod))
+                    return true;
+
+            return false;
+        }
 
         [Command("help")]
         [Summary("Ask me about my commands")]
@@ -42,12 +61,15 @@ namespace Morgana {
                 foreach (var mod in Commands.Modules) {
                     if (mod.Parent != null)
                         continue;
+                    if (!await UserCanRunModule(Context, mod))
+                        continue;
 
                     if (mod.Group != null)
                         reply += $"\n`{prefix}{mod.Group}` - {mod.Summary}.";
                     else
                         foreach (var cmd in mod.Commands)
-                            reply += $"\n`{prefix}{cmd.Name}` - {cmd.Summary}.";
+                            if (await UserCanRunCommand(Context, cmd))
+                                reply += $"\n`{prefix}{cmd.Name}` - {cmd.Summary}.";
                 }
 
                 await ReplyAsync(reply);
@@ -86,9 +108,11 @@ namespace Morgana {
 
                 string commands = "";
                 foreach (var mod in minfo.Submodules)
-                    commands += $"\n`{prefix}{matched} {mod.Name}` - {mod.Summary}.";
+                    if (await UserCanRunModule(Context, mod))
+                        commands += $"\n`{prefix}{matched} {mod.Name}` - {mod.Summary}.";
                 foreach (var cmd in minfo.Commands)
-                    commands += $"\n`{prefix}{matched} {cmd.Name}` - {cmd.Summary}.";
+                    if (await UserCanRunCommand(Context, cmd))
+                        commands += $"\n`{prefix}{matched} {cmd.Name}` - {cmd.Summary}.";
                 embed.AddField("**Commands**", commands);
 
                 await ReplyAsync(embed: embed.Build());

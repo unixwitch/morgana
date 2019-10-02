@@ -29,15 +29,10 @@ namespace Morgana {
 
         [Command("from")]
         [Summary("Set the channel to look for pinned pictures in")]
+        [RequireBotAdmin]
         public async Task From(ITextChannel channel) {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             gcfg.PinFrom = channel.Id;
             Vars.Save();
@@ -46,15 +41,11 @@ namespace Morgana {
 
         [Command("to")]
         [Summary("Set the channel to move pinned pictures to")]
+        [RequireBotAdmin]
         public async Task To(ITextChannel channel) {
             var guild = Context.Guild;
             var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             gcfg.PinTo = channel.Id;
             Vars.Save();
@@ -63,15 +54,10 @@ namespace Morgana {
 
         [Command("enable")]
         [Summary("Enable the pic mover")]
+        [RequireBotAdmin]
         public async Task Enable() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (gcfg.DoPins)
                 await ReplyAsync("The pinned picture mover is already enabled.");
@@ -84,15 +70,11 @@ namespace Morgana {
 
         [Command("disable")]
         [Summary("Disable the pic mover")]
+        [RequireBotAdmin]
         public async Task Disable() {
             var guild = Context.Guild;
             var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (!gcfg.DoPins)
                 await ReplyAsync("The pinned picture mover is already disabled.");
@@ -105,15 +87,10 @@ namespace Morgana {
 
         [Command("check")]
         [Summary("Check for outstanding pins to move")]
+        [RequireBotAdmin]
         public async Task Check() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (!gcfg.DoPins)
                 await ReplyAsync("The pinned picture is mover not enabled on this server.");
@@ -125,15 +102,10 @@ namespace Morgana {
 
         [Command("status")]
         [Summary("Show the pic mover configuration")]
+        [RequireBotAdmin]
         public async Task Status() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             string status = "The picture mover is " + (gcfg.DoPins ? "enabled." : "disabled.");
 

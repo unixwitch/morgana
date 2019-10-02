@@ -27,15 +27,10 @@ namespace Morgana {
         [Command("list")]
         [Summary("List the current configured bad words")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task List() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (gcfg.BadwordsList.Count() == 0) {
                 await ReplyAsync("No bad words are configured.");
@@ -49,17 +44,12 @@ namespace Morgana {
         [Command("add")]
         [Summary("Add a new bad word")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Add([Summary("The bad words to add")] params string[] words) {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
-
-            List<string> existing = new List<string>();
+            var existing = new List<string>();
             int added = 0;
 
             foreach (var word in words) {
@@ -74,7 +64,7 @@ namespace Morgana {
             if (existing.Count() == 0)
                 await ReplyAsync("Done!");
             else {
-                var existingstr = String.Join(", ", existing.Select(x => $"`{x}`"));
+                var existingstr = string.Join(", ", existing.Select(x => $"`{x}`"));
                 await ReplyAsync($"Added {added} words to the bad words list.  The following words are already in the filter: {existingstr}.");
             }
         }
@@ -82,17 +72,12 @@ namespace Morgana {
         [Command("remove")]
         [Summary("Remove a bad word")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Remove([Summary("The bad words to remove")] params string[] words) {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
 
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
-
-            List<string> notfound = new List<string>();
+            var notfound = new List<string>();
             int removed = 0;
 
             foreach (var word in words) {
@@ -107,7 +92,7 @@ namespace Morgana {
             if (notfound.Count() == 0)
                 await ReplyAsync("Done!");
             else {
-                var notfoundstr = String.Join(", ", notfound.Select(x => $"`{x}`"));
+                var notfoundstr = string.Join(", ", notfound.Select(x => $"`{x}`"));
                 await ReplyAsync($"Removed {removed} words from the bad words list.  The following words are not in the filter: {notfoundstr}.");
             }
         }
@@ -115,15 +100,10 @@ namespace Morgana {
         [Command("enable")]
         [Summary("Enable the bad words filter")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Enable() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (gcfg.BadwordsEnabled) {
                 await ReplyAsync("The bad words filter is already enabled.");
@@ -138,15 +118,10 @@ namespace Morgana {
         [Command("disable")]
         [Summary("Disable the bad words filter")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Disable() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (!gcfg.BadwordsEnabled) {
                 await ReplyAsync("The bad words filter is already disabled.");
@@ -161,15 +136,10 @@ namespace Morgana {
         [Command("status")]
         [Summary("Show whether the bad words filter is enabled or disabled")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Status() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             await ReplyAsync("The bad words filter is " + (gcfg.BadwordsEnabled ? "enabled." : "disabled."));
         }
@@ -177,15 +147,10 @@ namespace Morgana {
         [Command("message")]
         [Summary("Set the message used to admonish a user")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Message([Summary("The message text; use <user> to tag the username")] string message = null) {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (message == null) {
                 if (gcfg.BadwordsMessage == null)

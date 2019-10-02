@@ -32,17 +32,9 @@ namespace Morgana {
         [Command("say", RunMode = RunMode.Async)]
         [Summary("Make me say something")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Say([Summary("The channel I should talk in")] ITextChannel channel,
             [Summary("The words I should say")] [Remainder] string words) {
-            var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
-            var guilduser = Context.Guild.GetUser(Context.User.Id);
-
-            if (!gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can use this command.");
-                return;
-            }
-
             await channel.SendMessageAsync(words);
         }
 
@@ -102,7 +94,7 @@ namespace Morgana {
         }
 
         [Command("flip", RunMode = RunMode.Async)]
-        [Summary("Flip a coin... or a user.  Defaults to coin.")]
+        [Summary("Flip a coin... or a user.  Defaults to coin")]
         [RequireContext(ContextType.Guild)]
         public async Task Flip([Summary("The text or user to flip")][Remainder] string text = null) {
             if (text == null) {
@@ -309,17 +301,9 @@ namespace Morgana {
         [Command("die")]
         [Summary("Cause the bot to immediately exit")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Die() {
-            var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
-            var guilduser = Context.Guild.GetUser(Context.User.Id);
-
-            if (!gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can use this command.");
-                return;
-            }
-
-            Environment.Exit(0);
+            await Task.Run(() => Environment.Exit(0));
         }
     }
 }

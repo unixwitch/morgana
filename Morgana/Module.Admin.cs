@@ -91,6 +91,7 @@ namespace Morgana {
         [Group("remove")]
         [Summary("Remove a bot admin")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public class AdminRemoveModule : ModuleBase<SocketCommandContext> {
             public Storage Vars { get; set; }
 
@@ -100,11 +101,6 @@ namespace Morgana {
                 var guild = Context.Guild;
                 var gcfg = Vars.GetGuild(guild);
                 var guilduser = Context.Guild.GetUser(Context.User.Id);
-
-                if (!gcfg.IsAdmin(guilduser)) {
-                    await ReplyAsync("Sorry, only admins can use this command.");
-                    return;
-                }
 
                 if (target == null) {
                     await ReplyAsync("That user doesn't seem to exist.");

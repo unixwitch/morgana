@@ -185,6 +185,7 @@ namespace Morgana {
         [Command("unmanage")]
         [Summary("Prevent users bestowing or removing this role on themselves")]
         [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Unmanage(
             [Summary("The role that should be unmanaged")]
             string roleName) {

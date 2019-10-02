@@ -20,6 +20,21 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
+    public class RequireBotAdminAttribute : PreconditionAttribute {
+        public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) {
+            if (context.Guild == null)
+                return await Task.FromResult(PreconditionResult.FromError("This command cannot be used in a direct message."));
+
+            var config = services.GetRequiredService<Storage>();
+            var gcfg = config.GetGuild(context.Guild);
+
+            if (!gcfg.IsAdmin(context.User.Id))
+                return await Task.FromResult(PreconditionResult.FromError("This command can only be used by bot administrators."));
+
+            return await Task.FromResult(PreconditionResult.FromSuccess());
+        }
+    }
+
     public class Bot {
         Configuration _config;
 
@@ -42,9 +57,9 @@ namespace Morgana {
             using (var services =
                 new ServiceCollection()
                     .AddSingleton<DiscordSocketClient>(client)
-                    .AddSingleton<Storage>()
                     .AddSingleton<CommandService>()
                     .AddSingleton<CommandHandler>()
+                    .AddSingleton<Storage>()
                     .AddSingleton<BadwordsFilter>()
                     .AddSingleton<AuditLogger>()
                     .AddSingleton<PicMover>()

@@ -25,17 +25,13 @@ namespace Morgana {
         [Command("config")]
         [Summary("View or change a bot configuration option")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Config(
             [Summary("The name of the configuration option")] string item = null,
             [Summary("The new value of the option")] string newValue = null) {
 
             var guilduser = Context.Guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(Context.Guild);
-
-            if (!gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can use this command.");
-                return;
-            }
 
             if (item == null) {
                 await ReplyAsync("Please choose one of the following configuration options: `prefix`, `nickname`.");

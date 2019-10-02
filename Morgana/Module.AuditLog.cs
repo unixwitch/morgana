@@ -30,15 +30,11 @@ namespace Morgana {
         [Command("channel")]
         [Summary("Set the audit log channel")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Channel(ITextChannel channel) {
             var guild = Context.Guild;
             var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             gcfg.AuditChannel = channel.Id;
             Vars.Save();
@@ -48,15 +44,11 @@ namespace Morgana {
         [Command("enable")]
         [Summary("Enable the audit log")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Enable() {
             var guild = Context.Guild;
             var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (gcfg.AuditEnabled) {
                 if (gcfg.AuditChannel == 0)
@@ -78,15 +70,10 @@ namespace Morgana {
         [Command("disable")]
         [Summary("Disable the audit log")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Disable() {
             var guild = Context.Guild;
-            var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             if (!gcfg.AuditEnabled) {
                 await ReplyAsync("The audit log is already disabled.");
@@ -101,15 +88,11 @@ namespace Morgana {
         [Command("status")]
         [Summary("Show whether the audit log is enabled or disabled")]
         [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
         public async Task Status() {
             var guild = Context.Guild;
             var guildUser = guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(guild);
-
-            if (!gcfg.IsAdmin(guildUser)) {
-                await ReplyAsync("Sorry, this command can only be used by admins.");
-                return;
-            }
 
             var message = "The audit log is " + (gcfg.AuditEnabled ? "enabled." : "disabled.");
             if (gcfg.AuditChannel == 0)
