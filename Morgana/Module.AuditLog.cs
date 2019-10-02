@@ -169,6 +169,7 @@ namespace Morgana {
                         .WithTitle("User roles changed")
                         .AddField("**Old role list**", String.Join(", ", before.Roles.Select(r => $"`{r.Name}`")))
                         .AddField("**New role list**", String.Join(", ", after.Roles.Select(r => $"`{r.Name}`")))
+                        .WithFooter($"User ID: {after.Id}")
                         .Build());
             }
         }
