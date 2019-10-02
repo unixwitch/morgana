@@ -93,7 +93,7 @@ namespace Morgana {
             var gcfg = Vars.GetGuild(guild);
 
             if (!gcfg.DoPins)
-                await ReplyAsync("The pinned picture is mover not enabled on this server.");
+                await ReplyAsync("The pinned picture mover is not enabled on this server.");
             else {
                 await ReplyAsync("Okay, I'll take a look.");
                 await Mover.CheckPinsForGuild(guild);
@@ -265,7 +265,7 @@ namespace Morgana {
 
             var firstEmbed =
                 new EmbedBuilder()
-                    .WithDescription($"From {user}: {text}")
+                    .WithDescription($"From {Format.Sanitize(user)}: {text}")
                     .WithImageUrl(first.Url)
                     .Build();
 
@@ -274,7 +274,7 @@ namespace Morgana {
             foreach (var att in rest) {
                 var embed =
                     new EmbedBuilder()
-                        .WithDescription($"From {user} (cont)")
+                        .WithDescription($"From {Format.Sanitize(user)} (cont)")
                         .WithImageUrl(att.Url)
                         .Build();
                 await tochan.SendMessageAsync(embed: embed);

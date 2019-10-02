@@ -65,7 +65,7 @@ namespace Morgana {
                 if (target.Id == Context.User.Id)
                     await ReplyAsync("You already have that role!");
                 else
-                    await ReplyAsync($"{target.Username} already has that role!");
+                    await ReplyAsync($"{Format.Sanitize(target.Username)} already has that role!");
                 return;
             }
 
@@ -117,7 +117,7 @@ namespace Morgana {
                 if (target.Id == Context.User.Id)
                     await ReplyAsync("I can't remove that role because you don't have it to begin with.");
                 else
-                    await ReplyAsync($"I can't remove that role because {target.Username} doesn't have it to begin with.");
+                    await ReplyAsync($"I can't remove that role because {Format.Sanitize(target.Username)} doesn't have it to begin with.");
                 return;
             }
 
@@ -231,7 +231,7 @@ namespace Morgana {
                 }
             }
 
-            var list = String.Join(", ", strings);
+            var list = Format.Sanitize(String.Join(", ", strings));
             await ReplyAsync($"I can bestow these roles: {list}.");
         }
     }

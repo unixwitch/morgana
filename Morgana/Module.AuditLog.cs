@@ -139,8 +139,8 @@ namespace Morgana {
                     new EmbedBuilder()
                         .WithAuthor(after)
                         .WithTitle("User nickname changed")
-                        .AddField("**Old nickname**", before.Nickname ?? before.Username, true)
-                        .AddField("**New nickname**", after.Nickname ?? after.Username, true)
+                        .AddField("**Old nickname**", Format.Sanitize(before.Nickname ?? before.Username), true)
+                        .AddField("**New nickname**", Format.Sanitize(after.Nickname ?? after.Username), true)
                         .WithFooter($"User ID: {after.Id}")
                         .Build());
             }
@@ -150,8 +150,8 @@ namespace Morgana {
                     new EmbedBuilder()
                         .WithAuthor(after)
                         .WithTitle("User roles changed")
-                        .AddField("**Old role list**", String.Join(", ", before.Roles.Select(r => $"`{r.Name}`")))
-                        .AddField("**New role list**", String.Join(", ", after.Roles.Select(r => $"`{r.Name}`")))
+                        .AddField("**Old role list**", String.Join(", ", before.Roles.Select(r => $"`{Format.Sanitize(r.Name)}`")))
+                        .AddField("**New role list**", String.Join(", ", after.Roles.Select(r => $"`{Format.Sanitize(r.Name)}`")))
                         .WithFooter($"User ID: {after.Id}")
                         .Build());
             }
@@ -250,7 +250,7 @@ namespace Morgana {
                 new EmbedBuilder()
                     .WithAuthor(message.Author)
                     .AddField("**Message deleted**", "In " + MentionUtils.MentionChannel(message.Channel.Id))
-                    .AddField("**Message**", beforetext)
+                    .AddField("**Message**", Format.Sanitize(beforetext))
                     .WithFooter($"User ID: {message.Author.Id}")
                     .Build();
 

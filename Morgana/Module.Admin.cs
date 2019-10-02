@@ -46,7 +46,7 @@ namespace Morgana {
                     strings.Add(user.ToString());
             }
 
-            var str = String.Join(", ", strings);
+            var str = Format.Sanitize(string.Join(", ", strings));
             await ReplyAsync($"Configured admins: {str}");
         }
 

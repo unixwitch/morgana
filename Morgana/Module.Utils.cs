@@ -131,7 +131,8 @@ namespace Morgana {
                 case SpotifyGame spotify:
                     var artists = Format.Sanitize(String.Join(", ", spotify.Artists));
                     var track = Format.Sanitize(spotify.TrackTitle);
-                    string activity = $"{artists} - {track} (on {spotify.AlbumTitle})";
+                    var album = Format.Sanitize(spotify.AlbumTitle);
+                    string activity = $"{artists} - {track} (on {album})";
 
                     await ReplyAsync($"**{username}** is listening to {activity}");
                     break;
@@ -154,7 +155,7 @@ namespace Morgana {
                 return;
             }
 
-            var discorddate = target.CreatedAt.ToString("dd MMM yyyy HH:mm");
+            var discorddate = Format.Sanitize(target.CreatedAt.ToString("dd MMM yyyy HH:mm"));
             var discorddays = (int)(DateTime.Now - target.CreatedAt).TotalDays;
             var discordField = new EmbedFieldBuilder()
                 .WithName("**Joined Discord on**")
@@ -163,7 +164,7 @@ namespace Morgana {
 
             EmbedFieldBuilder serverField;
             if (target.JoinedAt != null) {
-                var serverdate = target.JoinedAt.Value.ToString("dd MMM yyyy HH:mm");
+                var serverdate = Format.Sanitize(target.JoinedAt.Value.ToString("dd MMM yyyy HH:mm"));
                 var serverdays = (int)(DateTime.Now - target.JoinedAt.Value).TotalDays;
                 serverField = new EmbedFieldBuilder()
                     .WithName("**Joined this server on**")
@@ -181,7 +182,7 @@ namespace Morgana {
                     .Select(roleId => Context.Guild.GetRole(roleId))
                     .Where(role => role != null)
                     .Where(role => !role.IsEveryone)
-                    .Select(role => role.Name);
+                    .Select(role => Format.Sanitize(role.Name));
 
             if (roles.Count() == 0)
                 rolesField.WithValue("None.");
@@ -216,7 +217,7 @@ namespace Morgana {
                     .WithThumbnailUrl(target.GetAvatarUrl())
                     .WithColor(c);
 
-            builder.AddField($"**{target.ToString()}**", status);
+            builder.AddField($"**{Format.Sanitize(target.ToString())}**", status);
 
             if (target.Activity != null) {
                 var activityType = target.Activity.Type;
@@ -229,18 +230,19 @@ namespace Morgana {
                         var artists = Format.Sanitize(String.Join(", ", spotify.Artists));
                         var trackTitle = Format.Sanitize(spotify.TrackTitle);
                         var trackUrl = Format.Sanitize(spotify.TrackUrl);
+                        var album = Format.Sanitize(spotify.AlbumTitle);
                         var track = $"[{trackTitle}]({trackUrl})";
-                        activity = $"{artists} - {track} (on {spotify.AlbumTitle})";
+                        activity = $"{artists} - {track} (on {album})";
                         builder.AddField($"**Listening to**", activity);
                         break;
 
                     case Game game:
                         activity = $"{activityType.ToString()} {target.Activity.Name}";
-                        builder.AddField("**Playing**", activity);
+                        builder.AddField("**Playing**", Format.Sanitize(activity));
                         break;
 
                     default:
-                        builder.AddField($"**Doing**", target.Activity.ToString());
+                        builder.AddField($"**Doing**", Format.Sanitize(target.Activity.ToString()));
                         break;
                 }
 
@@ -266,7 +268,7 @@ namespace Morgana {
             var builder =
                 new EmbedBuilder()
                     .WithThumbnailUrl(guild.IconUrl);
-            var created = guild.CreatedAt.ToString("dd MM yyyy HH:mm");
+            var created = Format.Sanitize(guild.CreatedAt.ToString("dd MM yyyy HH:mm"));
             var ageDays = (int)(DateTime.Now - guild.CreatedAt).TotalDays;
 
             builder.AddField(
@@ -282,7 +284,7 @@ namespace Morgana {
             int onlineUsers = guild.Users.Where(u => u.Status == UserStatus.Online).Count();
 
             var embed = builder
-                .AddField("**Region**", guild.VoiceRegionId, true)
+                .AddField("**Region**", Format.Sanitize(guild.VoiceRegionId), true)
 #if true
                 .AddField("**Users**", $"{onlineUsers}/{totalUsers}", true)
 #else

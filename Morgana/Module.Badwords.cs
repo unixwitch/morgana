@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Discord.WebSocket;
 using System.Text.RegularExpressions;
+using Discord;
 
 namespace Morgana {
 
@@ -37,7 +38,7 @@ namespace Morgana {
                 return;
             }
 
-            var words = String.Join(", ", gcfg.BadwordsList.Select(x => $"`{x}`"));
+            var words = String.Join(", ", gcfg.BadwordsList.Select(x => $"`{Format.Sanitize(x)}`"));
             await ReplyAsync($"Current bad words list: {words}.");
         }
 
@@ -64,7 +65,7 @@ namespace Morgana {
             if (existing.Count() == 0)
                 await ReplyAsync("Done!");
             else {
-                var existingstr = string.Join(", ", existing.Select(x => $"`{x}`"));
+                var existingstr = string.Join(", ", existing.Select(x => $"`{Format.Sanitize(x)}`"));
                 await ReplyAsync($"Added {added} words to the bad words list.  The following words are already in the filter: {existingstr}.");
             }
         }
@@ -92,7 +93,7 @@ namespace Morgana {
             if (notfound.Count() == 0)
                 await ReplyAsync("Done!");
             else {
-                var notfoundstr = string.Join(", ", notfound.Select(x => $"`{x}`"));
+                var notfoundstr = string.Join(", ", notfound.Select(x => $"`{Format.Sanitize(x)}`"));
                 await ReplyAsync($"Removed {removed} words from the bad words list.  The following words are not in the filter: {notfoundstr}.");
             }
         }
