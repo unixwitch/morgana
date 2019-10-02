@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using System.Linq;
+using Discord.WebSocket;
 
 namespace Morgana {
     [Group("role")]
@@ -35,8 +36,16 @@ namespace Morgana {
             var gcfg = Vars.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 
-            if (target != null && !gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can bestow roles upon other users.");
+            IRole role;
+            try {
+                role = guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
+            } catch (InvalidOperationException) {
+                await ReplyAsync("Sorry, that role doesn't seem to exist.");
+                return;
+            }
+
+            if (target != null && !guilduser.GuildPermissions.ManageRoles && !gcfg.IsAdmin(guilduser)) {
+                await ReplyAsync("Sorry, you don't have permission to manage roles on this server.");
                 return;
             }
 
@@ -47,23 +56,12 @@ namespace Morgana {
                 return;
             }
 
-            IRole role;
-            try {
-                role = guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
-            } catch (InvalidOperationException) {
-                //await Context.Message.AddReactionAsync(new Emoji("\u274c"));
-                await ReplyAsync("Sorry, that role doesn't seem to exist.");
-                return;
-            }
-
             if (!gcfg.IsManagedrole(role)) {
-                //await Context.Message.AddReactionAsync(new Emoji("\u274c"));
                 await ReplyAsync("It is not within my power to bestow that role.");
                 return;
             }
 
             if (target.RoleIds.Contains(role.Id)) {
-                //await Context.Message.AddReactionAsync(new Emoji("\u274c"));
                 if (target.Id == Context.User.Id)
                     await ReplyAsync("You already have that role!");
                 else
@@ -73,7 +71,6 @@ namespace Morgana {
 
             await target.AddRoleAsync(role);
             Vars.Save();
-            //await Context.Message.AddReactionAsync(new Emoji("\u2611"));
             await ReplyAsync("Done!");
         }
 
@@ -91,15 +88,14 @@ namespace Morgana {
             var gcfg = Vars.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 
-            if (target != null && !gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can remove roles from other users.");
+            if (target != null && !guilduser.GuildPermissions.ManageRoles && !gcfg.IsAdmin(guilduser)) {
+                await ReplyAsync("Sorry, you don't have permission to remove roles from other users.");
                 return;
             }
 
             target ??= guild.GetUser(Context.User.Id);
 
             if (target == null) {
-                //await Context.Message.AddReactionAsync(new Emoji("\u274c"));
                 await ReplyAsync("That user doesn't seem to exist.");
                 return;
             }
@@ -108,19 +104,16 @@ namespace Morgana {
             try {
                 role = guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
             } catch (InvalidOperationException) {
-                //await Context.Message.AddReactionAsync(new Emoji("\u274c"));
                 await ReplyAsync("Sorry, that role doesn't seem to exist.");
                 return;
             }
 
             if (!gcfg.IsManagedrole(role)) {
-                //await Context.Message.AddReactionAsync(new Emoji("\u274c"));
                 await ReplyAsync("It is not within my power to remove that role.");
                 return;
             }
 
             if (!target.RoleIds.Contains(role.Id)) {
-                //await Context.Message.AddReactionAsync(new Emoji("\u274c"));
                 if (target.Id == Context.User.Id)
                     await ReplyAsync("I can't remove that role because you don't have it to begin with.");
                 else
@@ -131,12 +124,37 @@ namespace Morgana {
             await target.RemoveRoleAsync(role);
             Vars.Save();
             await ReplyAsync("Done!");
-            //await Context.Message.AddReactionAsync(new Emoji("\u2417"));
         }
+
+#if false
+        [Command("debug_test_bestow")]
+        [RequireContext(ContextType.Guild)]
+        public async Task TestBestow(string roleName, IGuildUser target, IGuildUser doer = null) {
+            IRole role;
+            var gtarget = target as SocketGuildUser;
+            var gdoer = doer != null ? (doer as SocketGuildUser) : (Context.User as SocketGuildUser);
+
+            try {
+                role = Context.Guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
+            } catch (InvalidOperationException) {
+                await ReplyAsync("Sorry, that role doesn't seem to exist.");
+                return;
+            }
+
+            int roleHier = role.Position;
+            int userHier = gdoer.Hierarchy;
+            int targetHier = gtarget.Hierarchy;
+
+            bool canDoRole = userHier > roleHier;
+            bool canDoUser = userHier > targetHier;
+            await ReplyAsync($"{userHier}/{targetHier}/{roleHier} canDoRole={canDoRole} canDoUser={canDoUser}");
+        }
+#endif
 
         [Command("manage")]
         [Summary("Allow users to bestow or remove this role on themselves")]
         [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Manage(
             [Summary("The role that should be managed")]
             string roleName) {
@@ -144,16 +162,16 @@ namespace Morgana {
             var guilduser = Context.Guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(Context.Guild);
 
-            if (!gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can use this command.");
-                return;
-            }
-
             IRole role;
             try {
                 role = Context.Guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
             } catch (InvalidOperationException) {
                 await ReplyAsync("Sorry, that role doesn't seem to exist.");
+                return;
+            }
+
+            if (role.Position >= guilduser.Hierarchy) {
+                await ReplyAsync("Sorry, you can't manage a role that you don't have permission to bestow.");
                 return;
             }
 
@@ -174,16 +192,16 @@ namespace Morgana {
             var guilduser = Context.Guild.GetUser(Context.User.Id);
             var gcfg = Vars.GetGuild(Context.Guild);
 
-            if (!gcfg.IsAdmin(guilduser)) {
-                await ReplyAsync("Sorry, only admins can use this command.");
-                return;
-            }
-
             IRole role;
             try {
                 role = Context.Guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
             } catch (InvalidOperationException) {
                 await ReplyAsync("Sorry, that role doesn't seem to exist.");
+                return;
+            }
+
+            if (role.Position >= guilduser.Hierarchy) {
+                await ReplyAsync("Sorry, you can't manage a role that you don't have permission to bestow.");
                 return;
             }
 
