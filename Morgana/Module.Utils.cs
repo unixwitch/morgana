@@ -198,11 +198,33 @@ namespace Morgana {
 
             var footer = $"User ID: {target.Id}";
 
+            Color c = new Color(116, 127, 141);
+            string status = target.Status.ToString();
+
+            switch (target.Status) {
+                case UserStatus.Online:
+                    c = new Color(67, 181, 129);
+                    break;
+                case UserStatus.AFK:
+                case UserStatus.Idle:
+                    c = new Color(250, 166, 26);
+                    break;
+                case UserStatus.DoNotDisturb:
+                    c = new Color(240, 71, 71);
+                    status = "Do not disturb";
+                    break;
+                case UserStatus.Offline:
+                case UserStatus.Invisible:
+                    c = new Color(116, 127, 141);
+                    break;
+            }
+
             var builder =
                 new EmbedBuilder()
-                    .WithThumbnailUrl(target.GetAvatarUrl());
+                    .WithThumbnailUrl(target.GetAvatarUrl())
+                    .WithColor(c);
 
-            builder.AddField($"**{target.ToString()}**", target.Status.ToString());
+            builder.AddField($"**{target.ToString()}**", status);
 
             if (target.Activity != null) {
                 var activityType = target.Activity.Type;
