@@ -56,9 +56,11 @@ namespace Morgana {
         public int Id { get; set; }
 
         [Required]
+        [MaxLength(20)]
         public string GuildId { get; set; }
 
         [Required]
+        [MaxLength(20)]
         public string AdminId { get; set; }
     }
 
@@ -66,12 +68,15 @@ namespace Morgana {
         public int Id { get; set; }
 
         [Required]
+        [MaxLength(20)]
         public string GuildId { get; set; }
 
         [Required]
+        [MaxLength(64)]
         public string Option { get; set; }
 
         [Required]
+        [MaxLength(256)]
         public string Value { get; set; }
     }
 
@@ -79,9 +84,11 @@ namespace Morgana {
         public int Id { get; set; }
 
         [Required]
+        [MaxLength(20)]
         public string GuildId { get; set; }
 
         [Required]
+        [MaxLength(20)]
         public string RoleId { get; set; }
     }
 
@@ -89,9 +96,11 @@ namespace Morgana {
         public int GuildBadwordId { get; set; }
 
         [Required]
-        public ulong GuildId { get; set; }
+        [MaxLength(20)]
+        public string GuildId { get; set; }
 
         [Required]
+        [MaxLength(64)]
         public string Badword { get; set; }
     }
 
@@ -260,7 +269,7 @@ namespace Morgana {
          * Badwords filter.
          */
         public Task<List<string>> GetBadwordsAsync() {
-            return _db.GuildBadwords.Where(bw => bw.GuildId == _guild.Id).Select(bw => bw.Badword).ToListAsync();
+            return _db.GuildBadwords.Where(bw => bw.GuildId == _guild.Id.ToString()).Select(bw => bw.Badword).ToListAsync();
         }
 
         public Task<bool> IsBadwordsEnabledAsync() => GetOptionBoolOrFalse("badwords-enabled");
@@ -273,7 +282,7 @@ namespace Morgana {
             if (await IsBadwordAsync(w))
                 return false;
 
-            var o = new GuildBadword { GuildId = _guild.Id, Badword = w };
+            var o = new GuildBadword { GuildId = _guild.Id.ToString(), Badword = w };
             _db.GuildBadwords.Add(o);
             await _db.SaveChangesAsync();
             return true;
@@ -283,7 +292,7 @@ namespace Morgana {
             GuildBadword ga = null;
 
             try {
-                ga = await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id && a.Badword == w).SingleAsync();
+                ga = await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w).SingleAsync();
             } catch (InvalidOperationException) {
                 return false;
             }
@@ -295,7 +304,7 @@ namespace Morgana {
 
         public async Task<bool> IsBadwordAsync(string w) {
             try {
-                await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id && a.Badword == w).SingleAsync();
+                await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w).SingleAsync();
                 return true;
             } catch (InvalidOperationException) {
                 return false;
