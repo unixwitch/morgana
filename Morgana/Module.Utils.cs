@@ -16,10 +16,41 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using System.Linq;
+using System.Diagnostics;
+using CacheManager.Core;
+using EFSecondLevelCache.Core;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
     public class UtilsModule : ModuleBase<SocketCommandContext> {
         public Storage Vars { get; set; }
+
+        [Command("status", RunMode = RunMode.Async)]
+        [Summary("Show my status")]
+        public async Task StatusAsync() {
+            var netversion = Environment.Version;
+            var osvers = Environment.OSVersion;
+            var hostname = Environment.MachineName;
+            var user = Environment.UserName;
+            var uptime = DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
+            var suptime = uptime.ToString(@"dd\+hh\:mm\:ss");
+
+            var cache = EFStaticServiceProvider.Instance.GetRequiredService<ICacheManager<object>>();
+            var cachestats = new List<string>();
+
+            foreach (var ch in cache.CacheHandles) { 
+                var hits = ch.Stats.GetStatistic(CacheManager.Core.Internal.CacheStatsCounterType.Hits);
+                var misses = ch.Stats.GetStatistic(CacheManager.Core.Internal.CacheStatsCounterType.Misses);
+
+                int hitpct = 0;
+                if (hits + misses > 0)
+                    hitpct = (int) Math.Round(((double)hits / (double)(hits + misses) * 100));
+                cachestats.Add($"hit {hits}/{hits + misses}, {hitpct}%");
+            }
+
+            var scachestats = string.Join("; ", cachestats);
+            await ReplyAsync($"up {suptime}, host {user}@{hostname}, platform .NET Core {netversion} on {osvers}\ncache: {scachestats}");
+        }
 
         [Command("ping", RunMode = RunMode.Async)]
         [Summary("Check whether I'm still alive")]

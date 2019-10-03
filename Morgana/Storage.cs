@@ -327,8 +327,8 @@ namespace Morgana {
         public Task<List<string>> GetBadwordsAsync() {
             return _db.GuildBadwords
                 .Where(bw => bw.GuildId == _guild.Id.ToString())
-                .Cacheable()
                 .Select(bw => bw.Badword)
+                .Cacheable()
                 .ToListAsync();
         }
 

@@ -26,6 +26,7 @@ using EFSecondLevelCache.Core;
 using CacheManager.Core;
 using CacheManager.MicrosoftCachingMemory;
 using Newtonsoft.Json;
+using EFSecondLevelCache.Core.Contracts;
 
 namespace Morgana {
     public class RequireBotAdminAttribute : PreconditionAttribute {
@@ -62,18 +63,20 @@ namespace Morgana {
             var client = new DiscordSocketClient(clientConfig);
             client.Log += Log;
 
-            using (var services =
+            using var services =
                 new ServiceCollection()
                     .AddEFSecondLevelCache()
-                    .AddSingleton(typeof(ICacheManager<>), typeof(BaseCacheManager<>))
                     .AddSingleton(typeof(ICacheManagerConfiguration),
                         new CacheManager.Core.ConfigurationBuilder()
                             .WithJsonSerializer()
                             .WithMicrosoftMemoryCacheHandle(instanceName: "morgana")
                             .WithExpiration(ExpirationMode.Absolute, TimeSpan.FromMinutes(10))
+                            .EnableStatistics()
+                            .EnablePerformanceCounters()
                             .Build())
+                    .AddSingleton(typeof(ICacheManager<>), typeof(BaseCacheManager<>))
                     .AddDbContext<StorageContext>(options => _config.ConfigureDb(options))
-                    .AddSingleton<DiscordSocketClient>(client)
+                    .AddSingleton(client)
                     .AddSingleton<CommandService>()
                     .AddSingleton<CommandHandler>()
                     .AddSingleton<Storage>()
@@ -81,18 +84,17 @@ namespace Morgana {
                     .AddSingleton<AuditLogger>()
                     .AddSingleton<PicMover>()
                     .AddSingleton(_config)
-                    .BuildServiceProvider()) {
+                    .BuildServiceProvider();
 
-                services.GetRequiredService<CommandService>().Log += Log;
-                await services.GetRequiredService<CommandHandler>().InitializeAsync();
-                await services.GetRequiredService<BadwordsFilter>().InitialiseAsync();
-                await services.GetRequiredService<AuditLogger>().InitialiseAsync();
-                await services.GetRequiredService<PicMover>().InitialiseAsync();
+            services.GetRequiredService<CommandService>().Log += Log;
+            await services.GetRequiredService<CommandHandler>().InitializeAsync();
+            await services.GetRequiredService<BadwordsFilter>().InitialiseAsync();
+            await services.GetRequiredService<AuditLogger>().InitialiseAsync();
+            await services.GetRequiredService<PicMover>().InitialiseAsync();
 
-                await client.LoginAsync(TokenType.Bot, _config.Token);
-                await client.StartAsync();
-                await Task.Delay(TimeSpan.FromMilliseconds(-1));
-            }
+            await client.LoginAsync(TokenType.Bot, _config.Token);
+            await client.StartAsync();
+            await Task.Delay(TimeSpan.FromMilliseconds(-1));
         }
     }
 }
