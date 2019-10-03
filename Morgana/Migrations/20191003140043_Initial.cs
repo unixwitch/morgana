@@ -25,14 +25,14 @@ namespace Morgana.Migrations
                 name: "GuildBadwords",
                 columns: table => new
                 {
-                    GuildBadwordId = table.Column<int>(nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     GuildId = table.Column<string>(maxLength: 20, nullable: false),
                     Badword = table.Column<string>(maxLength: 64, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_GuildBadwords", x => x.GuildBadwordId);
+                    table.PrimaryKey("PK_GuildBadwords", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(

@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Morgana.Migrations
 {
     [DbContext(typeof(StorageContext))]
-    [Migration("20191003135209_Initial")]
+    [Migration("20191003140043_Initial")]
     partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -47,7 +47,7 @@ namespace Morgana.Migrations
 
             modelBuilder.Entity("Morgana.GuildBadword", b =>
                 {
-                    b.Property<int>("GuildBadwordId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
@@ -62,7 +62,7 @@ namespace Morgana.Migrations
                         .HasColumnType("character varying(20)")
                         .HasMaxLength(20);
 
-                    b.HasKey("GuildBadwordId");
+                    b.HasKey("Id");
 
                     b.HasIndex("GuildId", "Badword")
                         .IsUnique();

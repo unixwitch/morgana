@@ -95,7 +95,7 @@ namespace Morgana {
     }
 
     public class GuildBadword {
-        public int GuildBadwordId { get; set; }
+        public int Id { get; set; }
 
         [Required]
         [MaxLength(20)]
