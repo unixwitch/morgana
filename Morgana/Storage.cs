@@ -25,6 +25,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore.Design;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Morgana {
     public class StorageContext : DbContext {
@@ -53,6 +54,7 @@ namespace Morgana {
     }
 
     public class GuildAdmin {
+        [Key]
         public int Id { get; set; }
 
         [Required]
