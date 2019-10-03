@@ -22,10 +22,13 @@ using Discord;
 using System.Threading;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore.Design;
 using System.ComponentModel.DataAnnotations.Schema;
+using EFSecondLevelCache.Core;
+using EFSecondLevelCache.Core.Contracts;
 
 namespace Morgana {
     public class StorageContext : DbContext {
@@ -41,6 +44,46 @@ namespace Morgana {
             mb.Entity<GuildOption>().HasIndex(go => new { go.GuildId, go.Option }).IsUnique();
             mb.Entity<GuildManagedRole>().HasIndex(gmr => new { gmr.GuildId, gmr.RoleId }).IsUnique();
             mb.Entity<GuildBadword>().HasIndex(gbw => new { gbw.GuildId, gbw.Badword }).IsUnique();
+        }
+
+        public override int SaveChanges() {
+            Console.WriteLine("invalidating");
+            var changedEntityNames = this.GetChangedEntityNames();
+
+            this.ChangeTracker.AutoDetectChangesEnabled = false;
+            var result = base.SaveChanges();
+            this.ChangeTracker.AutoDetectChangesEnabled = true;
+
+            this.GetService<IEFCacheServiceProvider>().InvalidateCacheDependencies(changedEntityNames);
+
+            return result;
+        }
+        /*
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) {
+            Console.WriteLine("invalidating 2");
+            var changedEntityNames = this.GetChangedEntityNames();
+
+            this.ChangeTracker.AutoDetectChangesEnabled = false;
+            var result = await base.SaveChangesAsync(cancellationToken);
+            this.ChangeTracker.AutoDetectChangesEnabled = true;
+
+            this.GetService<IEFCacheServiceProvider>().InvalidateCacheDependencies(changedEntityNames);
+
+            return result;
+        }
+        */
+
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) {
+            Console.WriteLine("invalidating 1");
+            var changedEntityNames = this.GetChangedEntityNames();
+
+            this.ChangeTracker.AutoDetectChangesEnabled = false;
+            var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            this.ChangeTracker.AutoDetectChangesEnabled = true;
+
+            this.GetService<IEFCacheServiceProvider>().InvalidateCacheDependencies(changedEntityNames);
+
+            return result;
         }
     }
 
@@ -120,7 +163,10 @@ namespace Morgana {
          */
         protected async Task<string> GetOptionAsync(string option) {
             try {
-                var opt = await _db.GuildOptions.Where(opt => opt.GuildId == _guild.Id.ToString() && opt.Option == option).SingleAsync();
+                var opt = await _db.GuildOptions
+                    .Where(opt => opt.GuildId == _guild.Id.ToString() && opt.Option == option)
+                    .Cacheable()
+                    .SingleAsync();
                 return opt.Value;
             } catch (InvalidOperationException) {
                 return null;
@@ -175,6 +221,7 @@ namespace Morgana {
                 _db.GuildAdmins
                     .Where(ga => ga.GuildId == _guild.Id.ToString())
                     .Select(ga => ulong.Parse(ga.AdminId))
+                    .Cacheable()
                     .ToListAsync();
         }
 
@@ -208,7 +255,10 @@ namespace Morgana {
 
         public async Task<bool> IsAdminAsync(ulong id) {
             try {
-                await _db.GuildAdmins.Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == id.ToString()).SingleAsync();
+                await _db.GuildAdmins
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == id.ToString())
+                    .Cacheable()
+                    .SingleAsync();
                 return true;
             } catch (InvalidOperationException) {
                 return false;
@@ -225,6 +275,7 @@ namespace Morgana {
                 _db.GuildManagedRoles
                     .Where(mr => mr.GuildId == _guild.Id.ToString())
                     .Select(mr => _guild.GetRole(ulong.Parse(mr.RoleId)))
+                    .Cacheable()
                     .ToListAsync();
         }
 
@@ -254,7 +305,10 @@ namespace Morgana {
 
         public async Task<bool> IsManagedRoleAsync(IRole role) {
             try {
-                await _db.GuildManagedRoles.Where(a => a.GuildId == _guild.Id.ToString() && a.RoleId == role.Id.ToString()).SingleAsync();
+                await _db.GuildManagedRoles
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.RoleId == role.Id.ToString())
+                    .Cacheable()
+                    .SingleAsync();
                 return true;
             } catch (InvalidOperationException) {
                 return false;
@@ -271,7 +325,11 @@ namespace Morgana {
          * Badwords filter.
          */
         public Task<List<string>> GetBadwordsAsync() {
-            return _db.GuildBadwords.Where(bw => bw.GuildId == _guild.Id.ToString()).Select(bw => bw.Badword).ToListAsync();
+            return _db.GuildBadwords
+                .Where(bw => bw.GuildId == _guild.Id.ToString())
+                .Cacheable()
+                .Select(bw => bw.Badword)
+                .ToListAsync();
         }
 
         public Task<bool> IsBadwordsEnabledAsync() => GetOptionBoolOrFalse("badwords-enabled");
@@ -313,8 +371,13 @@ namespace Morgana {
             }
         }
 
-        public async Task<bool> IsAnyBadwordAsync(string[] w) {
-            return await _db.GuildBadwords.Where(bw => w.Contains(bw.Badword)).AnyAsync();
+        public async Task<bool> IsAnyBadwordAsync(string[] ws) {
+            var badwords = await _db.GuildBadwords
+                .Where(bw => bw.GuildId == _guild.Id.ToString())
+                .Select(bw => bw.Badword)
+                .Cacheable()
+                .ToListAsync();
+            return ws.Any(w => badwords.Contains(w));
         }
 
         /*

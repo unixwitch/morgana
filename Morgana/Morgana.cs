@@ -18,8 +18,14 @@ using Discord.Commands;
 using Discord.WebSocket;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
+using EFSecondLevelCache;
+using EFSecondLevelCache.Core;
+using CacheManager.Core;
+using CacheManager.MicrosoftCachingMemory;
+using Newtonsoft.Json;
 
 namespace Morgana {
     public class RequireBotAdminAttribute : PreconditionAttribute {
@@ -58,6 +64,14 @@ namespace Morgana {
 
             using (var services =
                 new ServiceCollection()
+                    .AddEFSecondLevelCache()
+                    .AddSingleton(typeof(ICacheManager<>), typeof(BaseCacheManager<>))
+                    .AddSingleton(typeof(ICacheManagerConfiguration),
+                        new CacheManager.Core.ConfigurationBuilder()
+                            .WithJsonSerializer()
+                            .WithMicrosoftMemoryCacheHandle(instanceName: "morgana")
+                            .WithExpiration(ExpirationMode.Absolute, TimeSpan.FromMinutes(10))
+                            .Build())
                     .AddDbContext<StorageContext>(options => _config.ConfigureDb(options))
                     .AddSingleton<DiscordSocketClient>(client)
                     .AddSingleton<CommandService>()
