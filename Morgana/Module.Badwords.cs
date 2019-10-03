@@ -178,7 +178,7 @@ namespace Morgana {
 
         public async Task<bool> FilterMessageAsync(SocketMessage p) {
             var message = p as SocketUserMessage;
-            var guilduser = message.Author;
+            var guilduser = message.Author as SocketGuildUser;
 
             if (message == null)
                 return false;

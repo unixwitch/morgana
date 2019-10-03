@@ -29,6 +29,8 @@ using Microsoft.EntityFrameworkCore.Design;
 using System.ComponentModel.DataAnnotations.Schema;
 using EFSecondLevelCache.Core;
 using EFSecondLevelCache.Core.Contracts;
+using Microsoft.Data.SqlClient;
+using Npgsql;
 
 namespace Morgana {
     public class StorageContext : DbContext {
@@ -216,32 +218,34 @@ namespace Morgana {
         /*
          * Admins.
          */
-        public Task<List<ulong>> GetAdminsAsync() {
-            return
-                _db.GuildAdmins
+        public async Task<IList<IGuildUser>> GetAdminsAsync() {
+            var adminWaits = await _db.GuildAdmins
                     .Where(ga => ga.GuildId == _guild.Id.ToString())
                     .Select(ga => ulong.Parse(ga.AdminId))
                     .Cacheable()
+                    .Select(id => _guild.GetUserAsync(id, CacheMode.AllowDownload, null))
                     .ToListAsync();
+            return (await Task.WhenAll(adminWaits)).Where(a => a != null).ToList();
         }
 
-        public async Task<bool> AdminAddAsync(ulong id) {
-            if (await IsAdminAsync(id))
+        public async Task<bool> AdminAddAsync(IGuildUser user) {
+            try {
+                var o = new GuildAdmin { GuildId = _guild.Id.ToString(), AdminId = user.Id.ToString() };
+                _db.GuildAdmins.Add(o);
+                await _db.SaveChangesAsync();
+                return true;
+            } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
                 return false;
-
-            var o = new GuildAdmin { GuildId = _guild.Id.ToString(), AdminId = id.ToString() };
-            _db.GuildAdmins.Add(o);
-            await _db.SaveChangesAsync();
-            return true;
+            }
         }
 
-        public Task<bool> AdminAddAsync(IGuildUser user) => AdminAddAsync(user.Id);
-
-        public async Task<bool> AdminRemoveAsync(ulong id) {
+        public async Task<bool> AdminRemoveAsync(IGuildUser user) {
             GuildAdmin ga = null;
 
             try {
-                ga = await _db.GuildAdmins.Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == id.ToString()).SingleAsync();
+                ga = await _db.GuildAdmins
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == user.Id.ToString())
+                    .SingleAsync();
             } catch (InvalidOperationException) {
                 return false;
             }
@@ -251,12 +255,10 @@ namespace Morgana {
             return true;
         }
 
-        public Task<bool> AdminRemoveAsync(IUser user) => AdminRemoveAsync(user.Id);
-
-        public async Task<bool> IsAdminAsync(ulong id) {
+        public async Task<bool> IsAdminAsync(IGuildUser user) {
             try {
                 await _db.GuildAdmins
-                    .Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == id.ToString())
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == user.Id.ToString())
                     .Cacheable()
                     .SingleAsync();
                 return true;
@@ -264,8 +266,6 @@ namespace Morgana {
                 return false;
             }
         }
-
-        public Task<bool> IsAdminAsync(IUser user) => IsAdminAsync(user.Id);
 
         /*
          * Managed roles.
@@ -280,13 +280,14 @@ namespace Morgana {
         }
 
         public async Task<bool> ManagedRoleAddAsync(IRole role) {
-            if (await IsManagedRoleAsync(role))
+            try {
+                var o = new GuildManagedRole { GuildId = _guild.Id.ToString(), RoleId = role.Id.ToString() };
+                _db.GuildManagedRoles.Add(o);
+                await _db.SaveChangesAsync();
+                return true;
+            } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
                 return false;
-
-            var o = new GuildManagedRole { GuildId = _guild.Id.ToString(), RoleId = role.Id.ToString() };
-            _db.GuildManagedRoles.Add(o);
-            await _db.SaveChangesAsync();
-            return true;
+            }
         }
 
         public async Task<bool> ManagedRoleRemoveAsync(IRole role) {
@@ -339,13 +340,15 @@ namespace Morgana {
         public Task SetBadwordsMessageAsync(string m) => SetOptionAsync("badwords-message", m);
 
         public async Task<bool> BadwordAddAsync(string w) {
-            if (await IsBadwordAsync(w))
+            try {
+                var o = new GuildBadword { GuildId = _guild.Id.ToString(), Badword = w };
+                _db.GuildBadwords.Add(o);
+                await _db.SaveChangesAsync();
+                return true;
+            } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
+                Console.WriteLine(e.ToString());
                 return false;
-
-            var o = new GuildBadword { GuildId = _guild.Id.ToString(), Badword = w };
-            _db.GuildBadwords.Add(o);
-            await _db.SaveChangesAsync();
-            return true;
+            }
         }
 
         public async Task<bool> BadwordRemoveAsync(string w) {
@@ -386,17 +389,37 @@ namespace Morgana {
         public Task<bool> IsAuditEnabledAsync() => GetOptionBoolOrFalse("audit-enabled");
         public Task SetAuditEnabledAsync(bool v) => SetOptionBoolAsync("audit-enabled", v);
 
-        public async Task<ulong> GetAuditChannelAsync() => ulong.Parse(await GetOptionAsync("audit-channel") ?? "0");
-        public Task SetAuditChannelAsync(ulong c) => SetOptionAsync("audit-channel", c.ToString());
+        public async Task<ITextChannel> GetAuditChannelAsync() {
+            var chanId = await GetOptionAsync("audit-channel");
+            if (chanId == null)
+                return null;
+
+            return await _guild.GetTextChannelAsync(ulong.Parse(chanId));
+        }
+
+        public Task SetAuditChannelAsync(ITextChannel c) => SetOptionAsync("audit-channel", c.Id.ToString());
 
         /*
          * Picture pinner.
          */
-        public async Task<ulong> GetPinFromAsync() => ulong.Parse(await GetOptionAsync("pin-from") ?? "0");
-        public Task SetPinFromAsync(ulong c) => SetOptionAsync("pin-from", c.ToString());
+        public async Task<ITextChannel> GetPinFromAsync() {
+            var chanId = await GetOptionAsync("pin-from");
+            if (chanId == null)
+                return null;
 
-        public async Task<ulong> GetPinToAsync() => ulong.Parse(await GetOptionAsync("pin-to") ?? "0");
-        public Task SetPinToAsync(ulong c) => SetOptionAsync("pin-to", c.ToString());
+            return await _guild.GetTextChannelAsync(ulong.Parse(chanId));
+        }
+
+        public Task SetPinFromAsync(ITextChannel chan) => SetOptionAsync("pin-from", chan.Id.ToString());
+
+        public async Task<ITextChannel> GetPinToAsync() {
+            var chanId = await GetOptionAsync("pin-to");
+            if (chanId == null)
+                return null;
+
+            return await _guild.GetTextChannelAsync(ulong.Parse(chanId));
+        }
+        public Task SetPinToAsync(ITextChannel chan) => SetOptionAsync("pin-to", chan.Id.ToString());
 
         public Task<bool> IsPinnerEnabledAsync() => GetOptionBoolOrFalse("pin-enabled");
         public Task SetPinnerEnabledAsync(bool v) => SetOptionBoolAsync("pin-enabled", v);

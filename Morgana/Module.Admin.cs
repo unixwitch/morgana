@@ -37,15 +37,8 @@ namespace Morgana {
             }
 
             var strings = new List<string>();
-            foreach (var admin in admins) {
-                var guild = (IGuild)Context.Guild;
-                var user = await guild.GetUserAsync(admin);
-
-                if (user == null)
-                    strings.Add($"<unknown user #{admin}>");
-                else
-                    strings.Add(user.ToString());
-            }
+            foreach (var admin in admins)
+                strings.Add(admin.ToString());
 
             var str = Format.Sanitize(string.Join(", ", strings));
             await ReplyAsync($"Configured admins: {str}");

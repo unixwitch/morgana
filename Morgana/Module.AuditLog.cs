@@ -35,7 +35,7 @@ namespace Morgana {
             var guild = Context.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            await gcfg.SetAuditChannelAsync(channel.Id);
+            await gcfg.SetAuditChannelAsync(channel);
             await ReplyAsync("Done!");
         }
 
@@ -50,7 +50,7 @@ namespace Morgana {
             var chan = await gcfg.GetAuditChannelAsync();
 
             if (await gcfg.IsAuditEnabledAsync()) {
-                if (chan == 0)
+                if (chan == null)
                     await ReplyAsync("The audit log is already enabled, but it won't work until a channel is configured.");
                 else
                     await ReplyAsync("The audit log is already enabled.");
@@ -59,7 +59,7 @@ namespace Morgana {
 
             await gcfg.SetAuditEnabledAsync(true);
 
-            if (chan == 0)
+            if (chan == null)
                 await ReplyAsync("The audit log is now enabled, but it won't work until a channel is configured.");
             else
                 await ReplyAsync("The audit log is now enabled.");
@@ -94,11 +94,10 @@ namespace Morgana {
             var chan = await gcfg.GetAuditChannelAsync();
 
             var message = "The audit log is " + (enabled ? "enabled." : "disabled.");
-            if (chan == 0)
+            if (chan == null)
                 message += "  No channel has been configured.";
             else {
-                var channel = guild.GetChannel(chan);
-                message += $"  The log will be sent to {MentionUtils.MentionChannel(channel.Id)}.";
+                message += $"  The log will be sent to {MentionUtils.MentionChannel(chan.Id)}.";
             }
 
             await ReplyAsync(message);
@@ -132,14 +131,10 @@ namespace Morgana {
                 return null;
 
             var chan = await gcfg.GetAuditChannelAsync();
-            if (chan == 0)
+            if (chan == null)
                 return null;
 
-            var auditchannel = guild.GetTextChannel(chan);
-            if (auditchannel == null)
-                return null;
-
-            return auditchannel;
+            return chan;
         }
 
         public async Task GuildMemberUpdatedAsync(SocketGuildUser before, SocketGuildUser after) {
@@ -213,9 +208,10 @@ namespace Morgana {
 
         public async Task UserBannedAsync(SocketUser user, SocketGuild guild) {
             var gcfg = Vars.GetGuild(guild);
+            var guser = user as SocketGuildUser;
 
-            if (await gcfg.IsAdminAsync(user)) {
-                await gcfg.AdminRemoveAsync(user);
+            if (await gcfg.IsAdminAsync(guser)) {
+                await gcfg.AdminRemoveAsync(guser);
             }
 
             var auditchannel = await GetAuditChannelForGuildAsync(guild);

@@ -179,9 +179,10 @@ namespace Morgana {
         [RequireContext(ContextType.Guild)]
         public async Task Userinfo([Summary("The user to display, if not yourself")] IGuildUser target = null) {
             var gcfg = Vars.GetGuild(Context.Guild);
+            var guser = Context.User as IGuildUser;
 
             target ??= Context.User as IGuildUser;
-            if (target.Id != Context.User.Id && !await gcfg.IsAdminAsync(Context.User)) {
+            if (target.Id != Context.User.Id && !await gcfg.IsAdminAsync(guser)) {
                 await ReplyAsync("Sorry, only admins can see another user's info.");
                 return;
             }

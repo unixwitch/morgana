@@ -37,7 +37,10 @@ namespace Morgana {
             var config = services.GetRequiredService<Storage>();
             var gcfg = config.GetGuild(context.Guild);
 
-            if (!await gcfg.IsAdminAsync(context.User))
+            if (!(context.User is IGuildUser guser))
+                return await Task.FromResult(PreconditionResult.FromSuccess());
+
+            if (!await gcfg.IsAdminAsync(guser))
                 return await Task.FromResult(PreconditionResult.FromError("This command can only be used by bot administrators."));
 
             return await Task.FromResult(PreconditionResult.FromSuccess());
