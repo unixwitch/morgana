@@ -4,32 +4,38 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Morgana;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Morgana.Migrations
 {
     [DbContext(typeof(StorageContext))]
-    [Migration("20191002234830_initial")]
-    partial class initial
+    [Migration("20191003135209_Initial")]
+    partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.0.0");
+                .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn)
+                .HasAnnotation("ProductVersion", "3.0.0")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             modelBuilder.Entity("Morgana.GuildAdmin", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("AdminId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(20);
 
                     b.Property<string>("GuildId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(20);
 
                     b.HasKey("Id");
 
@@ -43,14 +49,18 @@ namespace Morgana.Migrations
                 {
                     b.Property<int>("GuildBadwordId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Badword")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(64)")
+                        .HasMaxLength(64);
 
-                    b.Property<ulong>("GuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("GuildId")
+                        .IsRequired()
+                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(20);
 
                     b.HasKey("GuildBadwordId");
 
@@ -64,15 +74,18 @@ namespace Morgana.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("GuildId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(20);
 
                     b.Property<string>("RoleId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(20);
 
                     b.HasKey("Id");
 
@@ -86,19 +99,23 @@ namespace Morgana.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("GuildId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(20);
 
                     b.Property<string>("Option")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(64)")
+                        .HasMaxLength(64);
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(256)")
+                        .HasMaxLength(256);
 
                     b.HasKey("Id");
 

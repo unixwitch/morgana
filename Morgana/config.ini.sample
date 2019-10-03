@@ -1,0 +1,25 @@
+; Configuration for Morgana.
+
+; Your Discord API auth token.
+[auth]
+token = "abcdddddddddddddddddddddddddddddddddddddddddddddddddcba123"
+
+; The bot's backend database configuration.  Currently only PostgreSQL is supported.
+; Other databases may or may not work.
+[database]
+
+; PostgreSQL
+type = pgsql
+connection = "Server=localhost;Database=morgana;User Id=morgana;Password=abc123"
+
+; SQLite.
+type = sqlite
+connection = "Data Source=morgana.db"
+
+; Microsoft SQL Server
+;type = mssql
+;connection = "Server=(localdb)\mssqllocaldb;Database=Morgana;User Id=Morgana;Password=abc123"
+
+; MariaDB or Oracle MySQL
+;type = mysql
+;connection = "Server=localhost;Database=morgana;User Id=morgana;Password=abc123"
