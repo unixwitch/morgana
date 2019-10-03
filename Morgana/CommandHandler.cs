@@ -25,20 +25,17 @@ namespace Morgana {
         private DiscordSocketClient _client;
         private CommandService _commands;
         private IServiceProvider _services;
-        private Storage _config;
         private BadwordsFilter _filter;
 
         public CommandHandler(
             DiscordSocketClient client,
             CommandService commands,
             IServiceProvider services,
-            Storage config,
             BadwordsFilter filter) {
 
             _client = client;
             _commands = commands;
             _services = services;
-            _config = config;
             _filter = filter;
         }
 
@@ -58,10 +55,12 @@ namespace Morgana {
             if (await _filter.FilterMessageAsync(p))
                 return;
 
+            Storage config = (Storage) _services.GetService(typeof(Storage));
+
             int argpos = 0;
             var channel = message.Channel as SocketGuildChannel;
             if (channel != null) {
-                var gcfg = _config.GetGuild(channel.Guild);
+                var gcfg = config.GetGuild(channel.Guild);
                 var pfx = await gcfg.GetCommandPrefixAsync() ?? "~";
 
                 // If the command prefix is doubled, ignore it.  This avoids responding to formatting at

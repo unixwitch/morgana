@@ -33,7 +33,7 @@ namespace Morgana {
             var hostname = Environment.MachineName;
             var user = Environment.UserName;
             var uptime = DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
-            var suptime = uptime.ToString(@"dd\+hh\:mm\:ss");
+            var suptime = uptime.ToString(@"d\+h\:mm\:ss");
 
             var cache = EFStaticServiceProvider.Instance.GetRequiredService<ICacheManager<object>>();
             var cachestats = new List<string>();

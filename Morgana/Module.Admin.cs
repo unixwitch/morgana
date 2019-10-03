@@ -101,17 +101,15 @@ namespace Morgana {
                     return;
                 }
 
-                if (!await gcfg.IsAdminAsync(target)) {
-                    await ReplyAsync("That user is not an admin.");
-                    return;
-                }
-
                 if (admins.Count() == 1) {
                     await ReplyAsync("You cannot remove the last admin, otherwise there would be none left.");
                     return;
                 }
 
-                await gcfg.AdminRemoveAsync(target);
+                if (await gcfg.AdminRemoveAsync(target))
+                    await ReplyAsync("Done!");
+                else
+                    await ReplyAsync("That user is not an admin.");
             }
         }
     }

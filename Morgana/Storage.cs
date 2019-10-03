@@ -165,12 +165,14 @@ namespace Morgana {
          */
         protected async Task<string> GetOptionAsync(string option) {
             try {
-                var opt = await _db.GuildOptions
+                var opts = await _db.GuildOptions
                     .Where(opt => opt.GuildId == _guild.Id.ToString())
                     .Cacheable()
+                    .ToListAsync();
+                return opts
                     .Where(opt => opt.Option == option)
-                    .SingleAsync();
-                return opt.Value;
+                    .Select(opt => opt.Value)
+                    .Single();
             } catch (InvalidOperationException) {
                 return null;
             }
@@ -257,15 +259,7 @@ namespace Morgana {
         }
 
         public async Task<bool> IsAdminAsync(IGuildUser user) {
-            try {
-                await _db.GuildAdmins
-                    .Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == user.Id.ToString())
-                    .Cacheable()
-                    .SingleAsync();
-                return true;
-            } catch (InvalidOperationException) {
-                return false;
-            }
+            return (await GetAdminsAsync()).Where(a => a.Id == user.Id).Any();
         }
 
         /*
@@ -306,15 +300,7 @@ namespace Morgana {
         }
 
         public async Task<bool> IsManagedRoleAsync(IRole role) {
-            try {
-                await _db.GuildManagedRoles
-                    .Where(a => a.GuildId == _guild.Id.ToString() && a.RoleId == role.Id.ToString())
-                    .Cacheable()
-                    .SingleAsync();
-                return true;
-            } catch (InvalidOperationException) {
-                return false;
-            }
+            return (await GetManagedRolesAsync()).Where(r => r.Id == role.Id).Any();
         }
 
         /*
@@ -326,6 +312,12 @@ namespace Morgana {
         /*
          * Badwords filter.
          */
+        public Task<bool> IsBadwordsEnabledAsync() => GetOptionBoolOrFalse("badwords-enabled");
+        public Task SetBadwordsEnabledAsync(bool v) => SetOptionBoolAsync("badwords-enabled", v);
+
+        public Task<string> GetBadwordsMessageAsync() => GetOptionAsync("badwords-message");
+        public Task SetBadwordsMessageAsync(string m) => SetOptionAsync("badwords-message", m);
+
         public Task<List<string>> GetBadwordsAsync() {
             return _db.GuildBadwords
                 .Where(bw => bw.GuildId == _guild.Id.ToString())
@@ -333,12 +325,6 @@ namespace Morgana {
                 .Cacheable()
                 .ToListAsync();
         }
-
-        public Task<bool> IsBadwordsEnabledAsync() => GetOptionBoolOrFalse("badwords-enabled");
-        public Task SetBadwordsEnabledAsync(bool v) => SetOptionBoolAsync("badwords-enabled", v);
-
-        public Task<string> GetBadwordsMessageAsync() => GetOptionAsync("badwords-message");
-        public Task SetBadwordsMessageAsync(string m) => SetOptionAsync("badwords-message", m);
 
         public async Task<bool> BadwordAddAsync(string w) {
             try {
@@ -367,20 +353,11 @@ namespace Morgana {
         }
 
         public async Task<bool> IsBadwordAsync(string w) {
-            try {
-                await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w).SingleAsync();
-                return true;
-            } catch (InvalidOperationException) {
-                return false;
-            }
+            return (await GetBadwordsAsync()).Where(bw => bw == w).Any();
         }
 
         public async Task<bool> IsAnyBadwordAsync(string[] ws) {
-            var badwords = await _db.GuildBadwords
-                .Where(bw => bw.GuildId == _guild.Id.ToString())
-                .Select(bw => bw.Badword)
-                .Cacheable()
-                .ToListAsync();
+            var badwords = await GetBadwordsAsync();
             return ws.Any(w => badwords.Contains(w));
         }
 
