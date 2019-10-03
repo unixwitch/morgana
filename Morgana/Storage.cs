@@ -166,8 +166,9 @@ namespace Morgana {
         protected async Task<string> GetOptionAsync(string option) {
             try {
                 var opt = await _db.GuildOptions
-                    .Where(opt => opt.GuildId == _guild.Id.ToString() && opt.Option == option)
+                    .Where(opt => opt.GuildId == _guild.Id.ToString())
                     .Cacheable()
+                    .Where(opt => opt.Option == option)
                     .SingleAsync();
                 return opt.Value;
             } catch (InvalidOperationException) {

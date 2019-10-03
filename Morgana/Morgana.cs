@@ -82,7 +82,7 @@ namespace Morgana {
                     .AddSingleton(client)
                     .AddSingleton<CommandService>()
                     .AddSingleton<CommandHandler>()
-                    .AddSingleton<Storage>()
+                    .AddTransient<Storage>()
                     .AddSingleton<BadwordsFilter>()
                     .AddSingleton<AuditLogger>()
                     .AddSingleton<PicMover>()
