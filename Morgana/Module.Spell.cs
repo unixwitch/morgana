@@ -31,21 +31,21 @@ namespace Morgana {
         [Command("spell", RunMode = RunMode.Async)]
         [Summary("Check the spelling of a word")]
         public async Task SpellCheckAsync([Summary("The word to check")] string word) {
+            List<string> badwords = new List<string>();
             if (Context.Guild != null) {
                 var gcfg = Vars.GetGuild(Context.Guild);
-                if (await gcfg.IsBadwordsEnabledAsync() && await gcfg.IsBadwordAsync(word))
-                    return;
+                badwords = await gcfg.GetBadwordsAsync();
             }
 
-            var results = (await Speller.CheckWord(word)).Take(10).ToList();
-            var str = Format.Sanitize(string.Join(", ", results.Select(r => r.term)));
+            var results = (await Speller.CheckWord(word)).Where(w => !badwords.Contains(w.term)).Select(w => w.term).Take(10).ToList();
+            var str = string.Join(", ", results);
 
             if (results.Count() == 0)
-                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, I couldn't find any suggestions for that word.");
-            else if (results[0].term == word)
+                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, I couldn't find any suggestions for \"{Format.Sanitize(word)}\".");
+            else if (results[0] == word)
                 await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, \"{Format.Sanitize(word)}\" seems to be spelt correctly.  Other suggestions I found: {str}.");
             else
-                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, suggestions for \"{word}\": {str}.");
+                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, suggestions for \"{Format.Sanitize(word)}\": {str}.");
         }
     }
 
