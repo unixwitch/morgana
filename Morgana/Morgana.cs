@@ -101,6 +101,7 @@ namespace Morgana {
                     .AddSingleton<BadwordsFilter>()
                     .AddSingleton<AuditLogger>()
                     .AddSingleton<PicMover>()
+                    .AddSingleton<SpellingService>()
                     .AddSingleton(_config)
                     .BuildServiceProvider();
 
