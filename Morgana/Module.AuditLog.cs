@@ -188,8 +188,8 @@ namespace Morgana {
             var guild = user.Guild;
             var gcfg = Vars.GetGuild(guild);
 
-            if (await gcfg.IsAdminAsync(user)) {
-                await gcfg.AdminRemoveAsync(user);
+            if (await gcfg.IsAdminUserAsync(user.Id)) {
+                await gcfg.AdminUserRemoveAsync(user.Id);
             }
 
             var auditchannel = await GetAuditChannelForGuildAsync(guild);
@@ -210,8 +210,8 @@ namespace Morgana {
             var gcfg = Vars.GetGuild(guild);
             var guser = user as SocketGuildUser;
 
-            if (await gcfg.IsAdminAsync(guser)) {
-                await gcfg.AdminRemoveAsync(guser);
+            if (await gcfg.IsAdminUserAsync(guser.Id)) {
+                await gcfg.AdminUserRemoveAsync(guser.Id);
             }
 
             var auditchannel = await GetAuditChannelForGuildAsync(guild);

@@ -35,6 +35,7 @@ using Npgsql;
 namespace Morgana {
     public class StorageContext : DbContext {
         public DbSet<GuildAdmin> GuildAdmins { get; set; }
+        public DbSet<GuildAdminRole> GuildAdminRoles { get; set; }
         public DbSet<GuildOption> GuildOptions { get; set; }
         public DbSet<GuildManagedRole> GuildManagedRoles { get; set; }
         public DbSet<GuildBadword> GuildBadwords { get; set; }
@@ -118,6 +119,19 @@ namespace Morgana {
         [Required]
         [MaxLength(20)]
         public string AdminId { get; set; }
+    }
+
+    public class GuildAdminRole {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(20)]
+        public string GuildId { get; set; }
+
+        [Required]
+        [MaxLength(20)]
+        public string RoleId { get; set; }
     }
 
     public class GuildOption {
@@ -230,19 +244,17 @@ namespace Morgana {
         /*
          * Admins.
          */
-        public async Task<IList<IGuildUser>> GetAdminsAsync() {
-            var adminWaits = await _db.GuildAdmins
+        public async Task<IList<ulong>> GetAdminUsersAsync() {
+            return await _db.GuildAdmins
                     .Where(ga => ga.GuildId == _guild.Id.ToString())
                     .Select(ga => ulong.Parse(ga.AdminId))
                     .Cacheable()
-                    .Select(id => _guild.GetUserAsync(id, CacheMode.AllowDownload, null))
                     .ToListAsync();
-            return (await Task.WhenAll(adminWaits)).Where(a => a != null).ToList();
         }
 
-        public async Task<bool> AdminAddAsync(IGuildUser user) {
+        public async Task<bool> AdminUserAddAsync(ulong id) {
             try {
-                var o = new GuildAdmin { GuildId = _guild.Id.ToString(), AdminId = user.Id.ToString() };
+                var o = new GuildAdmin { GuildId = _guild.Id.ToString(), AdminId = id.ToString() };
                 _db.GuildAdmins.Add(o);
                 await _db.SaveChangesAsync();
                 return true;
@@ -251,12 +263,12 @@ namespace Morgana {
             }
         }
 
-        public async Task<bool> AdminRemoveAsync(IGuildUser user) {
+        public async Task<bool> AdminUserRemoveAsync(ulong id) {
             GuildAdmin ga = null;
 
             try {
                 ga = await _db.GuildAdmins
-                    .Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == user.Id.ToString())
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == id.ToString())
                     .SingleAsync();
             } catch (InvalidOperationException) {
                 return false;
@@ -267,8 +279,55 @@ namespace Morgana {
             return true;
         }
 
+        public async Task<bool> IsAdminUserAsync(ulong id) {
+            return (await GetAdminUsersAsync()).Where(i => i == id).Any();
+        }
+
+        public async Task<IList<ulong>> GetAdminRolesAsync() {
+            return await _db.GuildAdminRoles
+                    .Where(ga => ga.GuildId == _guild.Id.ToString())
+                    .Select(ga => ulong.Parse(ga.RoleId))
+                    .Cacheable()
+                    .ToListAsync();
+        }
+
+        public async Task<bool> AdminRoleAddAsync(ulong id) {
+            try {
+                var o = new GuildAdminRole { GuildId = _guild.Id.ToString(), RoleId = id.ToString() };
+                _db.GuildAdminRoles.Add(o);
+                await _db.SaveChangesAsync();
+                return true;
+            } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
+                return false;
+            }
+        }
+
+        public async Task<bool> AdminRoleRemoveAsync(ulong id) {
+            GuildAdminRole ga = null;
+
+            try {
+                ga = await _db.GuildAdminRoles
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.RoleId == id.ToString())
+                    .SingleAsync();
+            } catch (InvalidOperationException) {
+                return false;
+            }
+
+            _db.GuildAdminRoles.Remove(ga);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> IsAdminRoleAsync(ulong id) {
+            return (await GetAdminRolesAsync()).Where(i => i == id).Any();
+        }
+
         public async Task<bool> IsAdminAsync(IGuildUser user) {
-            return (await GetAdminsAsync()).Where(a => a.Id == user.Id).Any();
+            if ((await GetAdminUsersAsync()).Where(i => i == user.Id).Any())
+                return true;
+            if ((await GetAdminRolesAsync()).Where(i => user.RoleIds.Contains(i)).Any())
+                return true;
+            return false;
         }
 
         /*

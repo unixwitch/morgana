@@ -29,19 +29,31 @@ namespace Morgana {
         [RequireContext(ContextType.Guild)]
         public async Task List() {
             var gcfg = Vars.GetGuild(Context.Guild);
-            var admins = await gcfg.GetAdminsAsync();
+            var adminUsers = await gcfg.GetAdminUsersAsync();
+            var adminRoles = await gcfg.GetAdminRolesAsync();
 
-            if (admins.Count() == 0) {
+            if (adminUsers.Count() == 0 && adminRoles.Count() == 0) {
                 await ReplyAsync("No admins have been configured yet.");
                 return;
             }
 
-            var strings = new List<string>();
-            foreach (var admin in admins)
-                strings.Add(admin.ToString());
+            var ustr = Format.Sanitize(string.Join(", ",
+                adminUsers
+                .Select(id => Context.Guild.GetUser(id))
+                .Where(u => u != null)
+                .Select(u => $"{u.Username}#{u.Discriminator}")));
+            if (ustr == "")
+                ustr = "none";
 
-            var str = Format.Sanitize(string.Join(", ", strings));
-            await ReplyAsync($"Configured admins: {str}.");
+            var rstr = Format.Sanitize(string.Join(", ",
+                adminRoles
+                .Select(id => Context.Guild.GetRole(id))
+                .Where(r => r != null)
+                .Select(r => r.Name)));
+            if (rstr == "")
+                rstr = "none";
+
+            await ReplyAsync($"Configured admin roles: {rstr}, users: {ustr}.");
         }
 
         [Group("add")]
@@ -56,10 +68,10 @@ namespace Morgana {
                 var guild = Context.Guild;
                 var gcfg = Vars.GetGuild(guild);
                 var guilduser = Context.Guild.GetUser(Context.User.Id);
-                var admins = await gcfg.GetAdminsAsync();
+                var admins = await gcfg.GetAdminUsersAsync();
 
                 if (admins.Count() == 0) {
-                    if (!guilduser.GuildPermissions.Administrator) {
+                    if (!guilduser.GuildPermissions.Administrator && !await Vars.IsOwnerAsync(Context.User.Id)) {
                         await ReplyAsync("No admins have been defined yet, so only the server owner can use this command.");
                         return;
                     }
@@ -70,15 +82,37 @@ namespace Morgana {
                     }
                 }
 
-                if (target == null) {
-                    await ReplyAsync("That user doesn't seem to exist.");
-                    return;
-                }
-
-                if (await gcfg.AdminAddAsync(target))
+                if (await gcfg.AdminUserAddAsync(target.Id))
                     await ReplyAsync("Done!");
                 else
                     await ReplyAsync("That user is already an admin.");
+            }
+
+            [Command("role")]
+            [Summary("Add a server role as a bot admin")]
+            [RequireContext(ContextType.Guild)]
+            public async Task AddRole([Summary("The role to be added")] IRole target) {
+                var guild = Context.Guild;
+                var gcfg = Vars.GetGuild(guild);
+                var guilduser = Context.Guild.GetUser(Context.User.Id);
+                var admins = await gcfg.GetAdminRolesAsync();
+
+                if (admins.Count() == 0) {
+                    if (!guilduser.GuildPermissions.Administrator && !await Vars.IsOwnerAsync(Context.User.Id)) {
+                        await ReplyAsync("No admins have been defined yet, so only the server owner can use this command.");
+                        return;
+                    }
+                } else {
+                    if (!await gcfg.IsAdminAsync(guilduser)) {
+                        await ReplyAsync("Sorry, only admins can use this command.");
+                        return;
+                    }
+                }
+
+                if (await gcfg.AdminRoleAddAsync(target.Id))
+                    await ReplyAsync("Done!");
+                else
+                    await ReplyAsync("That role is already an admin.");
             }
         }
 
@@ -91,25 +125,40 @@ namespace Morgana {
 
             [Command("user")]
             [Summary("Remove a specific user as a bot admin")]
-            public async Task RemoveUser([Summary("The admin to be removed")] IGuildUser target) {
+            [RequireBotAdmin]
+            public async Task RemoveUser([Summary("The admin user to be removed")] IGuildUser target) {
                 var guild = Context.Guild;
                 var gcfg = Vars.GetGuild(guild);
-                var admins = await gcfg.GetAdminsAsync();
+                var admins = await gcfg.GetAdminUsersAsync();
 
-                if (target == null) {
-                    await ReplyAsync("That user doesn't seem to exist.");
-                    return;
-                }
-
-                if (admins.Count() == 1) {
+                if (admins.Count() == 1 && (await gcfg.GetAdminRolesAsync()).Count() == 0) {
                     await ReplyAsync("You cannot remove the last admin, otherwise there would be none left.");
                     return;
                 }
 
-                if (await gcfg.AdminRemoveAsync(target))
+                if (await gcfg.AdminUserRemoveAsync(target.Id))
                     await ReplyAsync("Done!");
                 else
                     await ReplyAsync("That user is not an admin.");
+            }
+
+            [Command("role")]
+            [Summary("Remove a server role as a bot admin")]
+            [RequireBotAdmin]
+            public async Task RemoveRole([Summary("The admin role to be removed")] IRole target) {
+                var guild = Context.Guild;
+                var gcfg = Vars.GetGuild(guild);
+                var admins = await gcfg.GetAdminRolesAsync();
+
+                if (admins.Count() == 1 && (await gcfg.GetAdminUsersAsync()).Count() == 0) {
+                    await ReplyAsync("You cannot remove the last admin, otherwise there would be none left.");
+                    return;
+                }
+
+                if (await gcfg.AdminRoleRemoveAsync(target.Id))
+                    await ReplyAsync("Done!");
+                else
+                    await ReplyAsync("That role is not an admin.");
             }
         }
     }
