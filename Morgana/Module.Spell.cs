@@ -38,14 +38,13 @@ namespace Morgana {
             }
 
             var results = (await Speller.CheckWord(word)).Where(w => !badwords.Contains(w.term)).Select(w => w.term).Take(10).ToList();
-            var str = string.Join(", ", results);
 
             if (results.Count() == 0)
                 await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, I couldn't find any suggestions for \"{Format.Sanitize(word)}\".");
             else if (results[0] == word)
-                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, \"{Format.Sanitize(word)}\" seems to be spelt correctly.  Other suggestions I found: {str}.");
+                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, \"{Format.Sanitize(word)}\" seems to be spelt correctly.  Other suggestions I found: {string.Join(", ", results.Skip(1))}.");
             else
-                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, suggestions for \"{Format.Sanitize(word)}\": {str}.");
+                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, suggestions for \"{Format.Sanitize(word)}\": {string.Join(", ", results)}.");
         }
     }
 
