@@ -41,7 +41,7 @@ namespace Morgana {
                 strings.Add(admin.ToString());
 
             var str = Format.Sanitize(string.Join(", ", strings));
-            await ReplyAsync($"Configured admins: {str}");
+            await ReplyAsync($"Configured admins: {str}.");
         }
 
         [Group("add")]

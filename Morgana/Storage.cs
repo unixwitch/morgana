@@ -38,6 +38,7 @@ namespace Morgana {
         public DbSet<GuildOption> GuildOptions { get; set; }
         public DbSet<GuildManagedRole> GuildManagedRoles { get; set; }
         public DbSet<GuildBadword> GuildBadwords { get; set; }
+        public DbSet<BotOwner> BotOwners { get; set; }
 
         public StorageContext(DbContextOptions<StorageContext> options) : base(options) { }
 
@@ -46,10 +47,10 @@ namespace Morgana {
             mb.Entity<GuildOption>().HasIndex(go => new { go.GuildId, go.Option }).IsUnique();
             mb.Entity<GuildManagedRole>().HasIndex(gmr => new { gmr.GuildId, gmr.RoleId }).IsUnique();
             mb.Entity<GuildBadword>().HasIndex(gbw => new { gbw.GuildId, gbw.Badword }).IsUnique();
+            mb.Entity<BotOwner>().HasIndex(bo => bo.OwnerId).IsUnique();
         }
 
         public override int SaveChanges() {
-            Console.WriteLine("invalidating");
             var changedEntityNames = this.GetChangedEntityNames();
 
             this.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -76,7 +77,6 @@ namespace Morgana {
         */
 
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) {
-            Console.WriteLine("invalidating 1");
             var changedEntityNames = this.GetChangedEntityNames();
 
             this.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -96,6 +96,15 @@ namespace Morgana {
             _config.ConfigureDb(options);
             return new StorageContext(options.Options);
         }
+    }
+
+    public class BotOwner {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(20)]
+        public string OwnerId { get; set; }
     }
 
     public class GuildAdmin {
@@ -405,9 +414,11 @@ namespace Morgana {
 
     public class Storage {
         private StorageContext _db;
+        private DiscordSocketClient _client;
 
-        public Storage(StorageContext db) {
+        public Storage(StorageContext db, DiscordSocketClient client) {
             _db = db;
+            _client = client;
         }
 
         /*
@@ -415,6 +426,48 @@ namespace Morgana {
          */
         public GuildConfig GetGuild(IGuild guild) {
             return new GuildConfig(_db, guild);
+        }
+
+        /*
+         * Bot owners.
+         */
+        public async Task<IList<ulong>> GetOwnersAsync() {
+            return await _db.BotOwners
+                    .Select(o => ulong.Parse(o.OwnerId))
+                    .Cacheable()
+                    .ToListAsync();
+        }
+
+        // This takes a ulong so we can add the initial owner before the client has started.
+        public async Task<bool> OwnerAddAsync(ulong id) {
+            try {
+                var o = new BotOwner { OwnerId = id.ToString() };
+                _db.BotOwners.Add(o);
+                await _db.SaveChangesAsync();
+                return true;
+            } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
+                return false;
+            }
+        }
+
+        public async Task<bool> OwnerRemoveAsync(ulong id) {
+            BotOwner ga = null;
+
+            try {
+                ga = await _db.BotOwners
+                    .Where(o => o.OwnerId == id.ToString())
+                    .SingleAsync();
+            } catch (InvalidOperationException) {
+                return false;
+            }
+
+            _db.BotOwners.Remove(ga);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> IsOwnerAsync(ulong id) {
+            return (await GetOwnersAsync()).Where(a => a == id).Any();
         }
     }
 }

@@ -27,8 +27,20 @@ using CacheManager.Core;
 using CacheManager.MicrosoftCachingMemory;
 using Newtonsoft.Json;
 using EFSecondLevelCache.Core.Contracts;
+using System.Linq;
 
 namespace Morgana {
+    public class RequireBotOwnerAttribute : PreconditionAttribute {
+        public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) {
+            var config = services.GetRequiredService<Storage>();
+
+            if (await config.IsOwnerAsync(context.User.Id))
+                return await Task.FromResult(PreconditionResult.FromSuccess());
+
+            return await Task.FromResult(PreconditionResult.FromError("This command can only be used by global bot owners."));
+        }
+    }
+
     public class RequireBotAdminAttribute : PreconditionAttribute {
         public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) {
             if (context.Guild == null)
@@ -38,12 +50,15 @@ namespace Morgana {
             var gcfg = config.GetGuild(context.Guild);
 
             if (!(context.User is IGuildUser guser))
+                return await Task.FromResult(PreconditionResult.FromError("This command cannot be used in a direct message."));
+
+            if (await config.IsOwnerAsync(guser.Id))
                 return await Task.FromResult(PreconditionResult.FromSuccess());
 
-            if (!await gcfg.IsAdminAsync(guser))
-                return await Task.FromResult(PreconditionResult.FromError("This command can only be used by bot administrators."));
+            if (await gcfg.IsAdminAsync(guser))
+                return await Task.FromResult(PreconditionResult.FromSuccess());
 
-            return await Task.FromResult(PreconditionResult.FromSuccess());
+            return await Task.FromResult(PreconditionResult.FromError("This command can only be used by bot administrators."));
         }
     }
 
@@ -88,6 +103,17 @@ namespace Morgana {
                     .AddSingleton<PicMover>()
                     .AddSingleton(_config)
                     .BuildServiceProvider();
+
+            var Vars = services.GetService<Storage>();
+            if ((await Vars.GetOwnersAsync()).Count() == 0) {
+                if (_config.InitialOwner == null) {
+                    Console.WriteLine("Warning: no bot owners are defined and general:initial_owner was not set in the configuration.");
+                    Console.WriteLine("This bot will not have any owners.");
+                } else {
+                    await Vars.OwnerAddAsync(_config.InitialOwner.Value);
+                    Console.WriteLine($"Added initial bot owner {_config.InitialOwner.Value}.");
+                }
+            }
 
             services.GetRequiredService<CommandService>().Log += Log;
             await services.GetRequiredService<CommandHandler>().InitializeAsync();

@@ -19,6 +19,7 @@ namespace Morgana {
 
     public class Configuration {
         public string Token { get; set; }
+        public ulong? InitialOwner { get; set; }
 
         public enum DBProviderType {
             SQLite,
@@ -59,12 +60,21 @@ namespace Morgana {
             }
 
             Configuration cfg = new Configuration {
-                Token = config["auth:token"],
+                Token = config["general:token"],
                 DbConnection = config["database:connection"]
             };
 
+            var owner = config["general:initial_owner"];
+            if (owner != null) {
+                try {
+                    cfg.InitialOwner = ulong.Parse(owner);
+                } catch (FormatException) {
+                    throw new ConfigurationException($"{filename}: invalid initial_owner '{owner}' (expected a user id)");
+                }
+            }
+
             if (cfg.Token == null)
-                throw new ConfigurationException($"{filename}: missing required option auth:token");
+                throw new ConfigurationException($"{filename}: missing required option general:token");
 
             if (cfg.DbConnection == null)
                 throw new ConfigurationException($"{filename}: missing required option database:connection");
