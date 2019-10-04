@@ -30,10 +30,10 @@ namespace Morgana {
         public async Task List() {
             var guilds = Context.Client.Guilds;
 
-            var header = $"{"Server ID",-22} {"Connected",-9} {"Synced",-6} Name\n";
+            var header = $"{"Server ID",20}    {"Connected",-9} {"Synced",-6} Name\n";
 
             var strings = guilds
-                .Select(g => Format.Sanitize($"{g.Id,-22} {g.IsConnected,-9} {g.IsSynced,-6} {g.Name}\n"));
+                .Select(g => Format.Sanitize($"{g.Id,20}    {g.IsConnected,-9} {g.IsSynced,-6} {g.Name}\n"));
 
             var str = "```" + header + string.Join(", ", strings) + "```";
             await ReplyAsync(str);
