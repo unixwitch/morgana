@@ -420,12 +420,12 @@ namespace Morgana {
         }
 
         public async Task<bool> IsBadwordAsync(string w) {
-            return (await GetBadwordsAsync()).Where(bw => bw == w).Any();
+            return (await GetBadwordsAsync()).Where(bw => bw == w.ToLower()).Any();
         }
 
         public async Task<bool> IsAnyBadwordAsync(string[] ws) {
             var badwords = await GetBadwordsAsync();
-            return ws.Any(w => badwords.Contains(w));
+            return ws.Any(w => badwords.Contains(w.ToLower()));
         }
 
         /*

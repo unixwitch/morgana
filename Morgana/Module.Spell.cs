@@ -48,6 +48,7 @@ namespace Morgana {
                 else
                     await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, suggestions for \"{Format.Sanitize(word)}\": {string.Join(", ", results.Select(w => "`" + Format.Sanitize(w) + "`"))}.");
             } else {
+                word = word.ToLower();
                 var suggestions = (await Speller.CheckSentence(word));
 
                 if (suggestions.Count() == 0) {

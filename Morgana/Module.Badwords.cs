@@ -54,7 +54,7 @@ namespace Morgana {
             var existing = new List<string>();
             int added = 0;
 
-            foreach (var word in words) {
+            foreach (var word in words.Select(w => w.ToLower())) {
                 if (await gcfg.BadwordAddAsync(word))
                     added++;
                 else
@@ -80,7 +80,7 @@ namespace Morgana {
             var notfound = new List<string>();
             int removed = 0;
 
-            foreach (var word in words) {
+            foreach (var word in words.Select(w => w.ToLower())) {
                 if (await gcfg.BadwordRemoveAsync(word))
                     removed++;
                 else
