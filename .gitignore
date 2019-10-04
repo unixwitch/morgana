@@ -4,3 +4,4 @@
 vars.json
 config.ini
 *.db
+*.user

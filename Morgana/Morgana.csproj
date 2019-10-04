@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="bigram_dictionary_en.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CacheManager.Microsoft.Extensions.Caching.Memory" Version="1.2.0" />
     <PackageReference Include="CacheManager.Serialization.Json" Version="1.2.0" />
     <PackageReference Include="Discord.Net" Version="2.1.1" />
@@ -30,6 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="dictionary_en.txt"/>
+    <EmbeddedResource Include="bigram_dictionary_en.txt" />
+    <EmbeddedResource Include="dictionary_en.txt" />
   </ItemGroup>
 </Project>

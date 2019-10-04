@@ -30,21 +30,25 @@ namespace Morgana {
 
         [Command("spell", RunMode = RunMode.Async)]
         [Summary("Check the spelling of a word")]
-        public async Task SpellCheckAsync([Summary("The word to check")] string word) {
-            List<string> badwords = new List<string>();
-            if (Context.Guild != null) {
-                var gcfg = Vars.GetGuild(Context.Guild);
-                badwords = await gcfg.GetBadwordsAsync();
+        public async Task SpellCheckAsync([Summary("The word or sentence to check")][Remainder] string word) {
+            if (word.IndexOfAny(new char[] { ' ', '\n', '\r', '\t' }) == -1) {
+                List<string> badwords = new List<string>();
+                if (Context.Guild != null) {
+                    var gcfg = Vars.GetGuild(Context.Guild);
+                    badwords = await gcfg.GetBadwordsAsync();
+                }
+
+                var results = (await Speller.CheckWord(word)).Where(w => !badwords.Contains(w.term)).Select(w => w.term).Take(10).ToList();
+                if (results.Count() == 0)
+                    await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, I couldn't find any suggestions for \"{Format.Sanitize(word)}\".");
+                else if (results[0] == word)
+                    await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, \"{Format.Sanitize(word)}\" seems to be spelt correctly.  Other suggestions I found: {string.Join(", ", results.Skip(1).Select(w => "`" + Format.Sanitize(w) + "`"))}.");
+                else
+                    await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, suggestions for \"{Format.Sanitize(word)}\": {string.Join(", ", results.Select(w => "`" + Format.Sanitize(w) + "`"))}.");
+            } else {
+                var result = string.Join(" ", (await Speller.CheckSentence(word)).Select(w => w.term));
+                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, how about this: `{Format.Sanitize(result)}`");
             }
-
-            var results = (await Speller.CheckWord(word)).Where(w => !badwords.Contains(w.term)).Select(w => w.term).Take(10).ToList();
-
-            if (results.Count() == 0)
-                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, I couldn't find any suggestions for \"{Format.Sanitize(word)}\".");
-            else if (results[0] == word)
-                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, \"{Format.Sanitize(word)}\" seems to be spelt correctly.  Other suggestions I found: {string.Join(", ", results.Skip(1))}.");
-            else
-                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, suggestions for \"{Format.Sanitize(word)}\": {string.Join(", ", results)}.");
         }
     }
 
@@ -58,12 +62,15 @@ namespace Morgana {
             Stream dict = assembly.GetManifestResourceStream("Morgana.dictionary_en.txt");
             _speller.LoadDictionary(dict, 0, 1);
 
-            //Stream bigram_dict = assembly.GetManifestResourceStream("Morgana.bigram_dictionary_en");
-            //_speller.LoadBigramDictionary(bigram_dict, 0, 2);
+            Stream bigram_dict = assembly.GetManifestResourceStream("Morgana.bigram_dictionary_en.txt");
+            _speller.LoadBigrams(bigram_dict, 0, 2);
         }
 
         public Task<List<SymSpell.SuggestItem>> CheckWord(string word) {
             return Task.Run(() => _speller.Lookup(word, SymSpell.Verbosity.All, 3));
+        }
+        public Task<List<SymSpell.SuggestItem>> CheckSentence(string word) {
+            return Task.Run(() => _speller.LookupCompound(word, 3));
         }
     }
 }

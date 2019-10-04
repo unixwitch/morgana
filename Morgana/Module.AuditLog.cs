@@ -286,6 +286,9 @@ namespace Morgana {
             var beforetext = beforeMessage.ToString();
             foreach (var att in beforeMessage.Attachments)
                 beforetext += "\n" + att.Url;
+            if (beforetext == null)
+                beforetext = "<could not retrieve message>";
+
             if (beforetext.Length > 900)
                 beforetext = beforetext.Substring(0, 900);
 
