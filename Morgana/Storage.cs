@@ -401,7 +401,6 @@ namespace Morgana {
                 await _db.SaveChangesAsync();
                 return true;
             } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
-                Console.WriteLine(e.ToString());
                 return false;
             }
         }

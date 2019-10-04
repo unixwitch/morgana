@@ -22,6 +22,7 @@ using EFSecondLevelCache.Core;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace Morgana {
     public class SpellModule : ModuleBase<SocketCommandContext> {
@@ -35,7 +36,8 @@ namespace Morgana {
                 List<string> badwords = new List<string>();
                 if (Context.Guild != null) {
                     var gcfg = Vars.GetGuild(Context.Guild);
-                    badwords = await gcfg.GetBadwordsAsync();
+                    if (await gcfg.IsBadwordsEnabledAsync())
+                        badwords = await gcfg.GetBadwordsAsync();
                 }
 
                 var results = (await Speller.CheckWord(word)).Where(w => !badwords.Contains(w.term)).Select(w => w.term).Take(10).ToList();
@@ -46,8 +48,35 @@ namespace Morgana {
                 else
                     await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, suggestions for \"{Format.Sanitize(word)}\": {string.Join(", ", results.Select(w => "`" + Format.Sanitize(w) + "`"))}.");
             } else {
-                var result = string.Join(" ", (await Speller.CheckSentence(word)).Select(w => w.term));
-                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, how about this: `{Format.Sanitize(result)}`");
+                var suggestions = (await Speller.CheckSentence(word));
+
+                if (suggestions.Count() == 0) {
+                    await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, I couldn't find any suggestions for that.");
+                    return;
+                }
+
+                var suggestion = suggestions.First();
+
+                if (suggestion.distance == 0) {
+                    await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, I couldn't find any suggestions for that.");
+                    return;
+                }
+
+                if (Context.Guild != null) {
+                    var gcfg = Vars.GetGuild(Context.Guild);
+
+                    if (await gcfg.IsBadwordsEnabledAsync()) {
+                        var badwords = await gcfg.GetBadwordsAsync();
+                        var splitwords = new Regex(@"\b").Split(suggestion.term);
+
+                        if (splitwords.Where(w => badwords.Contains(w)).Any()) {
+                            await ReplyAsync($"Sorry {MentionUtils.MentionUser(Context.User.Id)}, I can't spell that... it has a bad word in it!");
+                            return;
+                        }
+                    }
+                }
+
+                await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, how about this: `{Format.Sanitize(suggestion.term)}`");
             }
         }
     }
