@@ -335,7 +335,7 @@ namespace Morgana {
         [Command("die")]
         [Summary("Cause the bot to immediately exit")]
         [RequireContext(ContextType.Guild)]
-        [RequireBotAdmin]
+        [RequireBotOwner]
         public async Task Die() {
             await Task.Run(() => Environment.Exit(0));
         }
