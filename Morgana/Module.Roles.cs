@@ -61,6 +61,11 @@ namespace Morgana {
                 return;
             }
 
+            if (await gcfg.IsAdminRoleAsync(role.Id)) {
+                await ReplyAsync("I cannot bestow this role because it is an admin role.");
+                return;
+            }
+
             if (target.RoleIds.Contains(role.Id)) {
                 if (target.Id == Context.User.Id)
                     await ReplyAsync("You already have that role!");
@@ -170,6 +175,11 @@ namespace Morgana {
 
             if (role.Position >= guilduser.Hierarchy) {
                 await ReplyAsync("Sorry, you can't manage a role that you don't have permission to bestow.");
+                return;
+            }
+
+            if (await gcfg.IsAdminRoleAsync(role.Id)) {
+                await ReplyAsync("Sorry, I will not manage a role marked as an admin role.");
                 return;
             }
 
