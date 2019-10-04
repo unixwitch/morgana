@@ -30,7 +30,7 @@ namespace Morgana {
         public SpellingService Speller { get; set; }
 
         [Command("spell", RunMode = RunMode.Async)]
-        [Summary("Check the spelling of a word")]
+        [Summary("Check the spelling of a word or sentence")]
         public async Task SpellCheckAsync([Summary("The word or sentence to check")][Remainder] string word) {
             if (word.IndexOfAny(new char[] { ' ', '\n', '\r', '\t' }) == -1) {
                 List<string> badwords = new List<string>();

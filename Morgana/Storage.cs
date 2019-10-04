@@ -396,11 +396,12 @@ namespace Morgana {
 
         public async Task<bool> BadwordAddAsync(string w) {
             try {
-                var o = new GuildBadword { GuildId = _guild.Id.ToString(), Badword = w };
+                var o = new GuildBadword { GuildId = _guild.Id.ToString(), Badword = w.ToLower() };
                 _db.GuildBadwords.Add(o);
                 await _db.SaveChangesAsync();
                 return true;
             } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
+                Console.WriteLine(e.ToString());
                 return false;
             }
         }

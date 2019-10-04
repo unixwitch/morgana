@@ -47,10 +47,11 @@ namespace Morgana {
                 return await Task.FromResult(PreconditionResult.FromError("This command cannot be used in a direct message."));
 
             var config = services.GetRequiredService<Storage>();
-            var gcfg = config.GetGuild(context.Guild);
 
             if (!(context.User is IGuildUser guser))
                 return await Task.FromResult(PreconditionResult.FromError("This command cannot be used in a direct message."));
+
+            var gcfg = config.GetGuild(context.Guild);
 
             if (await config.IsOwnerAsync(guser.Id))
                 return await Task.FromResult(PreconditionResult.FromSuccess());

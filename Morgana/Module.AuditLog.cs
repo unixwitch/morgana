@@ -231,6 +231,9 @@ namespace Morgana {
         public async Task MessageDeletedAsync(Cacheable<IMessage, ulong> msg, ISocketMessageChannel ichannel) {
             var message = await msg.GetOrDownloadAsync();
 
+            if (message == null)
+                return;
+
             if (!(message.Channel is SocketGuildChannel channel))
                 return;
 
