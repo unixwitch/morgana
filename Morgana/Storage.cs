@@ -389,7 +389,7 @@ namespace Morgana {
         public Task<List<string>> GetBadwordsAsync() {
             return _db.GuildBadwords
                 .Where(bw => bw.GuildId == _guild.Id.ToString())
-                .Select(bw => bw.Badword)
+                .Select(bw => bw.Badword.ToLower())
                 .Cacheable()
                 .ToListAsync();
         }
@@ -410,7 +410,7 @@ namespace Morgana {
             GuildBadword ga = null;
 
             try {
-                ga = await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w).SingleAsync();
+                ga = await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w.ToLower()).SingleAsync();
             } catch (InvalidOperationException) {
                 return false;
             }

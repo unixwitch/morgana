@@ -37,4 +37,8 @@
     <EmbeddedResource Include="bigram_dictionary_en.txt" />
     <EmbeddedResource Include="dictionary_en.txt" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Morgana.Expr\Morgana.Expr.csproj" />
+  </ItemGroup>
 </Project>
