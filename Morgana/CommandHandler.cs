@@ -26,17 +26,20 @@ namespace Morgana {
         private CommandService _commands;
         private IServiceProvider _services;
         private BadwordsFilter _filter;
+        private InfobotService _infobot;
 
         public CommandHandler(
             DiscordSocketClient client,
             CommandService commands,
             IServiceProvider services,
-            BadwordsFilter filter) {
+            BadwordsFilter filter,
+            InfobotService infobot) {
 
             _client = client;
             _commands = commands;
             _services = services;
             _filter = filter;
+            _infobot = infobot;
         }
 
         public async Task InitializeAsync() {
@@ -53,6 +56,9 @@ namespace Morgana {
                 return;
 
             if (await _filter.FilterMessageAsync(p))
+                return;
+
+            if (await _infobot.HandleInfobotAsync(p))
                 return;
 
             Storage config = (Storage) _services.GetService(typeof(Storage));

@@ -100,6 +100,7 @@ namespace Morgana {
                     .AddSingleton<CommandHandler>()
                     .AddTransient<Storage>()
                     .AddSingleton<BadwordsFilter>()
+                    .AddSingleton<InfobotService>()
                     .AddSingleton<AuditLogger>()
                     .AddSingleton<PicMover>()
                     .AddSingleton<SpellingService>()

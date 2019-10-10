@@ -39,8 +39,9 @@ namespace Morgana {
         public DbSet<GuildOption> GuildOptions { get; set; }
         public DbSet<GuildManagedRole> GuildManagedRoles { get; set; }
         public DbSet<GuildBadword> GuildBadwords { get; set; }
+        public DbSet<GuildFactoid> GuildFactoids { get; set; }
         public DbSet<BotOwner> BotOwners { get; set; }
-
+        
         public StorageContext(DbContextOptions<StorageContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder mb) {
@@ -48,6 +49,7 @@ namespace Morgana {
             mb.Entity<GuildOption>().HasIndex(go => new { go.GuildId, go.Option }).IsUnique();
             mb.Entity<GuildManagedRole>().HasIndex(gmr => new { gmr.GuildId, gmr.RoleId }).IsUnique();
             mb.Entity<GuildBadword>().HasIndex(gbw => new { gbw.GuildId, gbw.Badword }).IsUnique();
+            mb.Entity<GuildFactoid>().HasIndex(gf => new { gf.GuildId, gf.Name }).IsUnique();
             mb.Entity<BotOwner>().HasIndex(bo => bo.OwnerId).IsUnique();
         }
 
@@ -172,6 +174,22 @@ namespace Morgana {
         [Required]
         [MaxLength(64)]
         public string Badword { get; set; }
+    }
+
+    public class GuildFactoid {
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(20)]
+        public string GuildId { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string Name { get; set; }
+
+        [Required]
+        [MaxLength(1024)]
+        public string Value { get; set; }
     }
 
     public class GuildConfig {
@@ -377,6 +395,9 @@ namespace Morgana {
         public Task<string> GetCommandPrefixAsync() => GetOptionAsync("commandprefix");
         public Task SetCommandPrefixAsync(string p) => SetOptionAsync("commandprefix", p);
 
+        public async Task<string> GetInfobotPrefixAsync() => (await GetOptionAsync("infobot-prefix")) ?? "??";
+        public Task SetInfobotPrefixAsync(string p) => SetOptionAsync("infobot-prefix", p);
+
         /*
          * Badwords filter.
          */
@@ -469,6 +490,35 @@ namespace Morgana {
 
         public Task<bool> IsPinnerEnabledAsync() => GetOptionBoolOrFalse("pin-enabled");
         public Task SetPinnerEnabledAsync(bool v) => SetOptionBoolAsync("pin-enabled", v);
+
+        /*
+         * Infobot.
+         */
+        public async Task<string> GetFactoidAsync(string name) {
+            try {
+                return (await _db.GuildFactoids
+                    .Where(f => f.GuildId == _guild.Id.ToString() && f.Name == name.ToLower())
+                    .Cacheable()
+                    .SingleAsync())
+                    .Value;
+            } catch (InvalidOperationException) {
+                return null;
+            }
+        }
+
+        public async Task SetFactoidAsync(string name, string value) {
+            GuildFactoid f;
+
+            try {
+                f = _db.GuildFactoids.Where(f => f.GuildId == _guild.Id.ToString() && f.Name == name.ToLower()).Single();
+                f.Value = value;
+            } catch (InvalidOperationException) {
+                f = new GuildFactoid { GuildId = _guild.Id.ToString(), Name = name.ToLower(), Value = value };
+                _db.GuildFactoids.Add(f);
+            }
+
+            await _db.SaveChangesAsync();
+        }
     }
 
     public class Storage {

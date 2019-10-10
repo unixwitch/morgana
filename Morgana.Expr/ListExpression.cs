@@ -88,8 +88,7 @@ namespace Morgana.Expr {
         bool _isinf;
         public override bool IsInfinite => _isinf;
 
-        public EnumerableListExpression(bool isinfinite, IEnumerable<Expression> values)
-        {
+        public EnumerableListExpression(bool isinfinite, IEnumerable<Expression> values) {
             _isinf = isinfinite;
             _values = values;
         }
