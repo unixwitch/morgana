@@ -90,31 +90,32 @@ namespace Morgana {
             if (str.Length == 0 || char.IsWhiteSpace(str[0]))
                 return false;
 
-            Console.WriteLine(str);
-            var bits = new Regex(@"\s").Split(str, 3);
-            Console.WriteLine(string.Join("|", bits));
+            var eq = str.IndexOf('=');
+            string key = null;
 
-            if (bits.Length == 1) {
-                string f = await gcfg.GetFactoidAsync(bits[0]);
+            if (eq == -1)
+                key = str.Trim();
+            else
+                key = str.Substring(0, eq).Trim();
+
+            if (eq == -1) {
+                string f = await gcfg.GetFactoidAsync(key);
                 if (f == null)
                     return false;
 
-                await message.Channel.SendMessageAsync($"{bits[0]} = {f}");
+                await message.Channel.SendMessageAsync($"{key} = {f}");
                 return true;
             }
 
-            if (bits.Length == 2 || bits[1] != "=") {
-                await message.Channel.SendMessageAsync($"{MentionUtils.MentionUser(guilduser.Id)}, I didn't understand that syntax.  Try `??name` or `??name = some text...`.");
-                return true;
-            }
+            string value = str.Substring(eq + 1).Trim();
 
             if (!await gcfg.IsAdminAsync(guilduser)) {
                 await message.Channel.SendMessageAsync($"Sorry {MentionUtils.MentionUser(guilduser.Id)}, only admins can teach me about new things.");
                 return true;
             }
 
-            await gcfg.SetFactoidAsync(bits[0], bits[2]);
-            await message.Channel.SendMessageAsync($"{MentionUtils.MentionUser(guilduser.Id)}, I understand `{bits[0]}` now.");
+            await gcfg.SetFactoidAsync(key, value);
+            await message.Channel.SendMessageAsync($"{MentionUtils.MentionUser(guilduser.Id)}, I understand `{key}` now.");
             return true;
         }
     }
