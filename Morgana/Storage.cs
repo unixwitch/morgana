@@ -543,7 +543,7 @@ namespace Morgana {
         /*
          * Infobot.
          */
-        public async Task<string> GetFactoidAsync(string name) {
+        public async Task<string> FactoidGetAsync(string name) {
             try {
                 return (await _db.GuildFactoids
                     .Where(f => f.GuildId == _guild.Id.ToString() && f.Name == name.ToLower())
@@ -555,7 +555,7 @@ namespace Morgana {
             }
         }
 
-        public async Task SetFactoidAsync(string name, string value) {
+        public async Task FactoidSetAsync(string name, string value) {
             GuildFactoid f;
 
             try {
@@ -568,5 +568,20 @@ namespace Morgana {
 
             await _db.SaveChangesAsync();
         }
+
+        public async Task<bool> FactoidRemoveAsync(string key) {
+            GuildFactoid f = null;
+
+            try {
+                f = await _db.GuildFactoids.Where(a => a.GuildId == _guild.Id.ToString() && a.Name == key.ToLower()).SingleAsync();
+            } catch (InvalidOperationException) {
+                return false;
+            }
+
+            _db.GuildFactoids.Remove(f);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
     }
 }

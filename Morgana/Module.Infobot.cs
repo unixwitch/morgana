@@ -57,6 +57,20 @@ namespace Morgana {
             await gcfg.SetInfobotPrefixAsync(p);
             await ReplyAsync("Done!");
         }
+
+        [Command("forget")]
+        [Summary("Remove an existing factoid")]
+        [RequireContext(ContextType.Guild)]
+        [RequireBotAdmin]
+        public async Task Forget(string key) {
+            var guild = Context.Guild;
+            var gcfg = DB.GetGuild(guild);
+
+            if (await gcfg.FactoidRemoveAsync(key))
+                await ReplyAsync("Done!");
+            else
+                await ReplyAsync($"Sorry, I don't know anything about `{Format.Sanitize(key)}`.");
+        }
     }
 
     public class InfobotService {
@@ -106,7 +120,7 @@ namespace Morgana {
                 key = str.Substring(0, eq).Trim();
 
             if (eq == -1) {
-                string f = await gcfg.GetFactoidAsync(key);
+                string f = await gcfg.FactoidGetAsync(key);
                 if (f == null)
                     return false;
 
@@ -121,8 +135,8 @@ namespace Morgana {
                 return true;
             }
 
-            await gcfg.SetFactoidAsync(key, value);
-            await message.Channel.SendMessageAsync($"{MentionUtils.MentionUser(guilduser.Id)}, I understand `{key}` now.");
+            await gcfg.FactoidSetAsync(key, value);
+            await message.Channel.SendMessageAsync($"{MentionUtils.MentionUser(guilduser.Id)}, I understand `{Format.Sanitize(key)}` now.");
             return true;
         }
     }
