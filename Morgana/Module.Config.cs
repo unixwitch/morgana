@@ -43,8 +43,13 @@ namespace Morgana {
                     if (newValue == null) 
                         await ReplyAsync($"The current command prefix is `{await gcfg.GetCommandPrefixAsync() ?? "~"}`.");
                     else {
-                        await gcfg.SetCommandPrefixAsync(newValue);
-                        await ReplyAsync("Done!");
+                        if (newValue == await gcfg.GetInfobotPrefixAsync()) {
+                            await ReplyAsync("The command prefix cannot be the same as the infobot prefix.");
+                            return;
+                        } else {
+                            await gcfg.SetCommandPrefixAsync(newValue);
+                            await ReplyAsync("Done!");
+                        }
                     }
                     return;
 

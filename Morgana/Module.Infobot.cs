@@ -48,6 +48,11 @@ namespace Morgana {
                 return;
             }
 
+            if (p == await gcfg.GetCommandPrefixAsync()) {
+                await ReplyAsync("The infobot prefix cannot be the same as the command prefix.");
+                return;
+            }
+
             await gcfg.SetInfobotPrefixAsync(p);
             await ReplyAsync("Done!");
         }
@@ -91,8 +96,7 @@ namespace Morgana {
                 return false;
 
             var eq = str.IndexOf('=');
-            string key = null;
-
+            string key;
             if (eq == -1)
                 key = str.Trim();
             else
