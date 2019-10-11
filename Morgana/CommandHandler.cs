@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.IO;
 using Newtonsoft.Json;
 using Discord;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
     public class CommandHandler {
@@ -61,12 +62,12 @@ namespace Morgana {
             if (await _infobot.HandleInfobotAsync(p))
                 return;
 
-            Storage config = (Storage) _services.GetService(typeof(Storage));
+            var db = _services.GetRequiredService<StorageContext>();
 
             int argpos = 0;
             var channel = message.Channel as SocketGuildChannel;
             if (channel != null) {
-                var gcfg = config.GetGuild(channel.Guild);
+                var gcfg = db.GetGuild(channel.Guild);
                 var pfx = await gcfg.GetCommandPrefixAsync() ?? "~";
 
                 // If the command prefix is doubled, ignore it.  This avoids responding to formatting at

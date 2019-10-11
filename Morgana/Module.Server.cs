@@ -22,7 +22,7 @@ namespace Morgana {
     [Group("server")]
     [Summary("Commands for managing the bot's servers")]
     public class ServerModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
 
         [Command("list", RunMode = RunMode.Async)]
         [Summary("List currently active servers.")]

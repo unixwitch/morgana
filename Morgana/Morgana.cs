@@ -32,7 +32,7 @@ using System.Linq;
 namespace Morgana {
     public class RequireBotOwnerAttribute : PreconditionAttribute {
         public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) {
-            var config = services.GetRequiredService<Storage>();
+            var config = services.GetRequiredService<StorageContext>();
 
             if (await config.IsOwnerAsync(context.User.Id))
                 return await Task.FromResult(PreconditionResult.FromSuccess());
@@ -46,7 +46,7 @@ namespace Morgana {
             if (context.Guild == null)
                 return await Task.FromResult(PreconditionResult.FromError("This command cannot be used in a direct message."));
 
-            var config = services.GetRequiredService<Storage>();
+            var config = services.GetRequiredService<StorageContext>();
 
             if (!(context.User is IGuildUser guser))
                 return await Task.FromResult(PreconditionResult.FromError("This command cannot be used in a direct message."));
@@ -98,7 +98,6 @@ namespace Morgana {
                     .AddSingleton(client)
                     .AddSingleton<CommandService>()
                     .AddSingleton<CommandHandler>()
-                    .AddTransient<Storage>()
                     .AddSingleton<BadwordsFilter>()
                     .AddSingleton<InfobotService>()
                     .AddSingleton<AuditLogger>()
@@ -107,13 +106,13 @@ namespace Morgana {
                     .AddSingleton(_config)
                     .BuildServiceProvider();
 
-            var Vars = services.GetService<Storage>();
-            if ((await Vars.GetOwnersAsync()).Count() == 0) {
+            var db = services.GetService<StorageContext>();
+            if ((await db.GetOwnersAsync()).Count() == 0) {
                 if (_config.InitialOwner == null) {
                     Console.WriteLine("Warning: no bot owners are defined and general:initial_owner was not set in the configuration.");
                     Console.WriteLine("This bot will not have any owners.");
                 } else {
-                    await Vars.OwnerAddAsync(_config.InitialOwner.Value);
+                    await db.OwnerAddAsync(_config.InitialOwner.Value);
                     Console.WriteLine($"Added initial bot owner {_config.InitialOwner.Value}.");
                 }
             }

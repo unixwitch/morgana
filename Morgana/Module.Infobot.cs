@@ -17,13 +17,14 @@ using System.Linq;
 using Discord.WebSocket;
 using System.Text.RegularExpressions;
 using Discord;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
 
     [Group("infobot")]
     [Summary("Configure the infobot")]
-    public class InfoboxModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+    public class InfobotModule : ModuleBase<SocketCommandContext> {
+        public StorageContext DB { get; set; }
 
         [Command("prefix")]
         [Summary("Show or set the infobot prefix")]
@@ -31,7 +32,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Prefix(string p = null) {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             if (p == null) {
                 await ReplyAsync("The current infobot prefix is: `" + (await gcfg.GetInfobotPrefixAsync()) + "`");
@@ -59,11 +60,11 @@ namespace Morgana {
     }
 
     public class InfobotService {
-        public Storage Vars { get; set; }
+        private IServiceProvider _svcs;
         public DiscordSocketClient Client { get; set; }
 
-        public InfobotService(Storage vars, DiscordSocketClient client) {
-            Vars = vars;
+        public InfobotService(IServiceProvider svcs, DiscordSocketClient client) {
+            _svcs = svcs;
             Client = client;
         }
 
@@ -72,6 +73,8 @@ namespace Morgana {
         }
 
         public async Task<bool> HandleInfobotAsync(SocketMessage p) {
+            var db = _svcs.GetRequiredService<StorageContext>();
+
             var message = p as SocketUserMessage;
             var guilduser = message.Author as SocketGuildUser;
 
@@ -85,7 +88,7 @@ namespace Morgana {
             if (channel == null)
                 return false;
 
-            var gcfg = Vars.GetGuild(channel.Guild);
+            var gcfg = db.GetGuild(channel.Guild);
 
             var pfx = await gcfg.GetInfobotPrefixAsync();
             if (!message.Content.StartsWith(pfx))

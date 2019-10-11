@@ -19,12 +19,13 @@ using System.Linq;
 using System.Threading;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
     [Group("picmover")]
     [Summary("Configure the pinned picture mover")]
     public class PicMoverModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
         public PicMover Mover { get; set; }
 
         [Command("from")]
@@ -32,7 +33,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task From(ITextChannel channel) {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             await gcfg.SetPinFromAsync(channel);
             await ReplyAsync("Done!");
@@ -43,7 +44,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task To(ITextChannel channel) {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             await gcfg.SetPinToAsync(channel);
             await ReplyAsync("Done!");
@@ -54,7 +55,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Enable() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             if (await gcfg.IsPinnerEnabledAsync())
                 await ReplyAsync("The pinned picture mover is already enabled.");
@@ -69,7 +70,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Disable() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             if (!await gcfg.IsPinnerEnabledAsync())
                 await ReplyAsync("The pinned picture mover is already disabled.");
@@ -84,7 +85,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Check() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             if (!await gcfg.IsPinnerEnabledAsync())
                 await ReplyAsync("The pinned picture mover is not enabled on this server.");
@@ -99,7 +100,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Status() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             string status = "The picture mover is " + (await gcfg.IsPinnerEnabledAsync() ? "enabled." : "disabled.");
 
@@ -120,7 +121,7 @@ namespace Morgana {
     }
 
     public class PicMover {
-        public Storage Vars { get; set; }
+        private IServiceProvider _svcs;
         public DiscordSocketClient Client { get; set; }
 
         protected struct PinnedMessage {
@@ -131,8 +132,8 @@ namespace Morgana {
 
         private Channel<PinnedMessage> pendingChan = Channel.CreateUnbounded<PinnedMessage>();
 
-        public PicMover(Storage vars, DiscordSocketClient client) {
-            Vars = vars;
+        public PicMover(IServiceProvider svcs, DiscordSocketClient client) {
+            _svcs = svcs;
             Client = client;
         }
 
@@ -162,7 +163,8 @@ namespace Morgana {
         }
 
         public async Task CheckPinsForGuild(IGuild guild) {
-            var gcfg = Vars.GetGuild(guild);
+            var db = _svcs.GetRequiredService<StorageContext>();
+            var gcfg = db.GetGuild(guild);
 
             if (!await gcfg.IsPinnerEnabledAsync())
                 return;
@@ -189,7 +191,8 @@ namespace Morgana {
         }
 
         protected async Task ConsiderPinning(IGuild guild, IMessage msg) {
-            var gcfg = Vars.GetGuild(guild);
+            var db = _svcs.GetRequiredService<StorageContext>();
+            var gcfg = db.GetGuild(guild);
 
             if (!await gcfg.IsPinnerEnabledAsync())
                 return;
@@ -218,8 +221,9 @@ namespace Morgana {
         }
 
         protected async Task PinMessage(PinnedMessage msg) {
+            var db = _svcs.GetRequiredService<StorageContext>();
             var guild = Client.GetGuild(msg.GuildID);
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = db.GetGuild(guild);
 
             if (!await gcfg.IsPinnerEnabledAsync())
                 return;

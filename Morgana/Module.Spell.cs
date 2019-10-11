@@ -26,7 +26,7 @@ using System.Text.RegularExpressions;
 
 namespace Morgana {
     public class SpellModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
         public SpellingService Speller { get; set; }
 
         [Command("spell", RunMode = RunMode.Async)]
@@ -35,7 +35,7 @@ namespace Morgana {
             if (word.IndexOfAny(new char[] { ' ', '\n', '\r', '\t' }) == -1) {
                 List<string> badwords = new List<string>();
                 if (Context.Guild != null) {
-                    var gcfg = Vars.GetGuild(Context.Guild);
+                    var gcfg = DB.GetGuild(Context.Guild);
                     if (await gcfg.IsBadwordsEnabledAsync())
                         badwords = await gcfg.GetBadwordsAsync();
                 }
@@ -64,7 +64,7 @@ namespace Morgana {
                 }
 
                 if (Context.Guild != null) {
-                    var gcfg = Vars.GetGuild(Context.Guild);
+                    var gcfg = DB.GetGuild(Context.Guild);
 
                     if (await gcfg.IsBadwordsEnabledAsync()) {
                         var badwords = await gcfg.GetBadwordsAsync();

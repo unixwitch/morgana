@@ -19,7 +19,7 @@ using System.Threading;
 
 namespace Morgana {
     public class CalcModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
 
         [Command("calc", RunMode = RunMode.Async)]
         [Summary("Evaluate an expression")]

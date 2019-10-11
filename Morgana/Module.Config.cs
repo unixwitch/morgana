@@ -20,7 +20,7 @@ using System.Linq;
 
 namespace Morgana {
     public class ConfigModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
 
         [Command("config")]
         [Summary("View or change a bot configuration option")]
@@ -31,7 +31,7 @@ namespace Morgana {
             [Summary("The new value of the option")] string newValue = null) {
 
             var guilduser = Context.Guild.GetUser(Context.User.Id);
-            var gcfg = Vars.GetGuild(Context.Guild);
+            var gcfg = DB.GetGuild(Context.Guild);
 
             if (item == null) {
                 await ReplyAsync("Please choose one of the following configuration options: `prefix`, `nickname`.");

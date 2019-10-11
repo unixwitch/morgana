@@ -22,13 +22,13 @@ namespace Morgana {
     [Group("owner")]
     [Summary("Commands for managing bot owners")]
     public class OwnerModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
 
         [Command("list", RunMode = RunMode.Async)]
         [Summary("List currently configured bot owners")]
         [RequireBotOwner]
         public async Task List() {
-            var owners = await Vars.GetOwnersAsync();
+            var owners = await DB.GetOwnersAsync();
 
             if (owners.Count() == 0) {
                 await ReplyAsync("No bot owners have been configured yet.");
@@ -52,7 +52,7 @@ namespace Morgana {
                 return;
             }
 
-            if (await Vars.OwnerAddAsync(target.Id))
+            if (await DB.OwnerAddAsync(target.Id))
                 await ReplyAsync("Done!");
             else
                 await ReplyAsync("That user is already a bot owner.");
@@ -62,14 +62,14 @@ namespace Morgana {
         [Summary("Remove a bot owner")]
         [RequireBotOwner]
         public async Task RemoveUser([Summary("The owner to be removed")] IUser target) {
-            var owners = await Vars.GetOwnersAsync();
+            var owners = await DB.GetOwnersAsync();
 
             if (owners.Count() == 1) {
                 await ReplyAsync("You cannot remove the last bot owner, otherwise there would be none left.");
                 return;
             }
 
-            if (await Vars.OwnerRemoveAsync(target.Id))
+            if (await DB.OwnerRemoveAsync(target.Id))
                 await ReplyAsync("Done!");
             else
                 await ReplyAsync("That user is not a bot owner.");

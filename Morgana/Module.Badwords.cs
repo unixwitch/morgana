@@ -17,13 +17,14 @@ using System.Linq;
 using Discord.WebSocket;
 using System.Text.RegularExpressions;
 using Discord;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
 
     [Group("badwords")]
     [Summary("Configure the bad words filter")]
     public class BadwordsModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
 
         [Command("list")]
         [Summary("List the current configured bad words")]
@@ -31,7 +32,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task List() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             var words = await gcfg.GetBadwordsAsync();
             if (!words.Any()) {
@@ -49,7 +50,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Add([Summary("The bad words to add")] params string[] words) {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             var existing = new List<string>();
             int added = 0;
@@ -75,7 +76,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Remove([Summary("The bad words to remove")] params string[] words) {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             var notfound = new List<string>();
             int removed = 0;
@@ -101,7 +102,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Enable() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             if (await gcfg.IsBadwordsEnabledAsync()) {
                 await ReplyAsync("The bad words filter is already enabled.");
@@ -118,7 +119,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Disable() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             if (!await gcfg.IsBadwordsEnabledAsync()) {
                 await ReplyAsync("The bad words filter is already disabled.");
@@ -135,7 +136,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Status() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             await ReplyAsync("The bad words filter is " + (await gcfg.IsBadwordsEnabledAsync() ? "enabled." : "disabled."));
         }
@@ -146,7 +147,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Message([Summary("The message text; use <user> to tag the username")][Remainder] string message = null) {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             if (message == null) {
                 var msg = await gcfg.GetBadwordsMessageAsync();
@@ -163,20 +164,21 @@ namespace Morgana {
     }
 
     public class BadwordsFilter {
-        public Storage Vars { get; set; }
+        private IServiceProvider _svcs;
         public DiscordSocketClient Client { get; set; }
 
-        public BadwordsFilter(Storage vars, DiscordSocketClient client) {
-            Vars = vars;
+        public BadwordsFilter(IServiceProvider svcs, DiscordSocketClient client) {
+            _svcs = svcs;
             Client = client;
         }
 
         public Task InitialiseAsync() {
-            //            Client.MessageReceived += FilterMessageAsync;
             return Task.CompletedTask;
         }
 
         public async Task<bool> FilterMessageAsync(SocketMessage p) {
+            var db = _svcs.GetRequiredService<StorageContext>();
+
             var message = p as SocketUserMessage;
             var guilduser = message.Author as SocketGuildUser;
 
@@ -190,7 +192,7 @@ namespace Morgana {
             if (channel == null)
                 return false;
 
-            var gcfg = Vars.GetGuild(channel.Guild);
+            var gcfg = db.GetGuild(channel.Guild);
             if (!await gcfg.IsBadwordsEnabledAsync())
                 return false;
 

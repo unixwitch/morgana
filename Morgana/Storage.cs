@@ -90,6 +90,55 @@ namespace Morgana {
 
             return result;
         }
+
+        /*
+         * Return the config for a specific guild.
+         */
+        public GuildConfig GetGuild(IGuild guild) {
+            return new GuildConfig(this, guild);
+        }
+
+        /*
+         * Bot owners.
+         */
+        public async Task<IList<ulong>> GetOwnersAsync() {
+            return await BotOwners
+                    .Select(o => ulong.Parse(o.OwnerId))
+                    .Cacheable()
+                    .ToListAsync();
+        }
+
+        // This takes a ulong so we can add the initial owner before the client has started.
+        public async Task<bool> OwnerAddAsync(ulong id) {
+            try {
+                var o = new BotOwner { OwnerId = id.ToString() };
+                BotOwners.Add(o);
+                await SaveChangesAsync();
+                return true;
+            } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
+                return false;
+            }
+        }
+
+        public async Task<bool> OwnerRemoveAsync(ulong id) {
+            BotOwner ga = null;
+
+            try {
+                ga = await BotOwners
+                    .Where(o => o.OwnerId == id.ToString())
+                    .SingleAsync();
+            } catch (InvalidOperationException) {
+                return false;
+            }
+
+            BotOwners.Remove(ga);
+            await SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> IsOwnerAsync(ulong id) {
+            return (await GetOwnersAsync()).Where(a => a == id).Any();
+        }
     }
 
     public class StorageContextFactory : IDesignTimeDbContextFactory<StorageContext> {
@@ -518,65 +567,6 @@ namespace Morgana {
             }
 
             await _db.SaveChangesAsync();
-        }
-    }
-
-    public class Storage {
-        private StorageContext _db;
-        private DiscordSocketClient _client;
-
-        public Storage(StorageContext db, DiscordSocketClient client) {
-            _db = db;
-            _client = client;
-        }
-
-        /*
-         * Return the config for a specific guild.
-         */
-        public GuildConfig GetGuild(IGuild guild) {
-            return new GuildConfig(_db, guild);
-        }
-
-        /*
-         * Bot owners.
-         */
-        public async Task<IList<ulong>> GetOwnersAsync() {
-            return await _db.BotOwners
-                    .Select(o => ulong.Parse(o.OwnerId))
-                    .Cacheable()
-                    .ToListAsync();
-        }
-
-        // This takes a ulong so we can add the initial owner before the client has started.
-        public async Task<bool> OwnerAddAsync(ulong id) {
-            try {
-                var o = new BotOwner { OwnerId = id.ToString() };
-                _db.BotOwners.Add(o);
-                await _db.SaveChangesAsync();
-                return true;
-            } catch (DbUpdateException e) when (e.InnerException is PostgresException sqlex && sqlex.SqlState == "23505") {
-                return false;
-            }
-        }
-
-        public async Task<bool> OwnerRemoveAsync(ulong id) {
-            BotOwner ga = null;
-
-            try {
-                ga = await _db.BotOwners
-                    .Where(o => o.OwnerId == id.ToString())
-                    .SingleAsync();
-            } catch (InvalidOperationException) {
-                return false;
-            }
-
-            _db.BotOwners.Remove(ga);
-            await _db.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> IsOwnerAsync(ulong id) {
-            return (await GetOwnersAsync()).Where(a => a == id).Any();
         }
     }
 }

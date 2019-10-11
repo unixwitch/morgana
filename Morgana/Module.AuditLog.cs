@@ -19,13 +19,14 @@ using System.Text.RegularExpressions;
 using Discord;
 using Microsoft.VisualBasic;
 using System.Net.Sockets;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
 
     [Group("audit")]
     [Summary("Configure the audit log")]
     public class AuditLogModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
 
         [Command("channel")]
         [Summary("Set the audit log channel")]
@@ -33,7 +34,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Channel(ITextChannel channel) {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             await gcfg.SetAuditChannelAsync(channel);
             await ReplyAsync("Done!");
@@ -45,7 +46,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Enable() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             var chan = await gcfg.GetAuditChannelAsync();
 
@@ -71,7 +72,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Disable() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             if (!await gcfg.IsAuditEnabledAsync()) {
                 await ReplyAsync("The audit log is already disabled.");
@@ -88,7 +89,7 @@ namespace Morgana {
         [RequireBotAdmin]
         public async Task Status() {
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = DB.GetGuild(guild);
 
             var enabled = await gcfg.IsAuditEnabledAsync();
             var chan = await gcfg.GetAuditChannelAsync();
@@ -105,11 +106,11 @@ namespace Morgana {
     }
 
     public class AuditLogger {
-        public Storage Vars { get; set; }
+        private IServiceProvider _svcs;
         public DiscordSocketClient Client { get; set; }
 
-        public AuditLogger(Storage vars, DiscordSocketClient client) {
-            Vars = vars;
+        public AuditLogger(IServiceProvider svcs, DiscordSocketClient client) {
+            _svcs = svcs;
             Client = client;
         }
 
@@ -124,7 +125,8 @@ namespace Morgana {
         }
 
         protected async Task<ITextChannel> GetAuditChannelForGuildAsync(SocketGuild guild) {
-            var gcfg = Vars.GetGuild(guild);
+            var db = _svcs.GetRequiredService<StorageContext>();
+            var gcfg = db.GetGuild(guild);
 
             var enabled = await gcfg.IsAuditEnabledAsync();
             if (!enabled)
@@ -185,8 +187,9 @@ namespace Morgana {
         }
 
         public async Task UserLeftAsync(SocketGuildUser user) {
+            var db = _svcs.GetRequiredService<StorageContext>();
             var guild = user.Guild;
-            var gcfg = Vars.GetGuild(guild);
+            var gcfg = db.GetGuild(guild);
 
             if (await gcfg.IsAdminUserAsync(user.Id)) {
                 await gcfg.AdminUserRemoveAsync(user.Id);
@@ -207,7 +210,8 @@ namespace Morgana {
         }
 
         public async Task UserBannedAsync(SocketUser user, SocketGuild guild) {
-            var gcfg = Vars.GetGuild(guild);
+            var db = _svcs.GetRequiredService<StorageContext>();
+            var gcfg = db.GetGuild(guild);
             var guser = user as SocketGuildUser;
 
             if (await gcfg.IsAdminUserAsync(guser.Id)) {

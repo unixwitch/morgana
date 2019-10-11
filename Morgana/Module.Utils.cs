@@ -23,7 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
     public class UtilsModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
 
         [Command("status", RunMode = RunMode.Async)]
         [Summary("Show my status")]
@@ -178,7 +178,7 @@ namespace Morgana {
         [Summary("Display some information about yourself or another user")]
         [RequireContext(ContextType.Guild)]
         public async Task Userinfo([Summary("The user to display, if not yourself")] IGuildUser target = null) {
-            var gcfg = Vars.GetGuild(Context.Guild);
+            var gcfg = DB.GetGuild(Context.Guild);
             var guser = Context.User as IGuildUser;
 
             target ??= Context.User as IGuildUser;

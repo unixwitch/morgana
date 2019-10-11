@@ -20,7 +20,7 @@ namespace Morgana {
     [Group("role")]
     [Summary("Commands for managing roles")]
     public class RolesModule : ModuleBase<SocketCommandContext> {
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
 
         [Command("add")]
         [Summary("Bestow a role upon yourself or another user")]
@@ -33,7 +33,7 @@ namespace Morgana {
                 IGuildUser target = null) {
 
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(Context.Guild);
+            var gcfg = DB.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 
             IRole role;
@@ -89,7 +89,7 @@ namespace Morgana {
                 IGuildUser target = null) {
 
             var guild = Context.Guild;
-            var gcfg = Vars.GetGuild(Context.Guild);
+            var gcfg = DB.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
 
             if (target != null && !guilduser.GuildPermissions.ManageRoles && !await gcfg.IsAdminAsync(guilduser)) {
@@ -163,7 +163,7 @@ namespace Morgana {
             string roleName) {
 
             var guilduser = Context.Guild.GetUser(Context.User.Id);
-            var gcfg = Vars.GetGuild(Context.Guild);
+            var gcfg = DB.GetGuild(Context.Guild);
 
             IRole role;
             try {
@@ -198,7 +198,7 @@ namespace Morgana {
             string roleName) {
 
             var guilduser = Context.Guild.GetUser(Context.User.Id);
-            var gcfg = Vars.GetGuild(Context.Guild);
+            var gcfg = DB.GetGuild(Context.Guild);
 
             IRole role;
             try {
@@ -224,7 +224,7 @@ namespace Morgana {
         [RequireContext(ContextType.Guild)]
         public async Task List() {
             var guilduser = Context.Guild.GetUser(Context.User.Id);
-            var gcfg = Vars.GetGuild(Context.Guild);
+            var gcfg = DB.GetGuild(Context.Guild);
 
             var strings = new List<string>();
             var roles = await gcfg.GetManagedRolesAsync();

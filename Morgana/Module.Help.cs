@@ -22,7 +22,7 @@ using System.Windows.Input;
 namespace Morgana {
     public class HelpModule : ModuleBase<SocketCommandContext> {
         public CommandService Commands { get; set; }
-        public Storage Vars { get; set; }
+        public StorageContext DB { get; set; }
         public IServiceProvider Services { get; set; }
 
         public async Task<bool> UserCanRunCommand(ICommandContext ctx, CommandInfo command) {
@@ -51,7 +51,7 @@ namespace Morgana {
             EmbedBuilder embed = null;
 
             if (Context.Guild != null) {
-                gcfg = Vars.GetGuild(Context.Guild);
+                gcfg = DB.GetGuild(Context.Guild);
                 prefix = await gcfg.GetCommandPrefixAsync() ?? "~";
             }
 
