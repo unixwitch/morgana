@@ -23,84 +23,70 @@ namespace Morgana {
         public StorageContext DB { get; set; }
 
         [Command("add")]
-        [Summary("Bestow a role upon yourself or another user")]
+        [Summary("Bestow a role upon yourself")]
         [RequireContext(ContextType.Guild)]
         [RequireBotPermission(GuildPermission.ManageRoles)]
         public async Task Add(
                 [Summary("The role to be bestowed")] 
-                string roleName,
-                [Summary("The user upon whom the role should be bestowed, if not yourself")]
-                IGuildUser target = null) {
-
+                [Remainder]
+                string roleName) {
             var guild = Context.Guild;
             var gcfg = DB.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
+            var mu = MentionUtils.MentionUser(Context.User.Id);
 
             IRole role;
             try {
                 role = guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
             } catch (InvalidOperationException) {
-                await ReplyAsync("Sorry, that role doesn't seem to exist.");
+                await ReplyAsync($"Sorry {mu}, I can't find a role called `{roleName}`.");
                 return;
             }
 
-            if (target != null && !guilduser.GuildPermissions.ManageRoles && !await gcfg.IsAdminAsync(guilduser)) {
-                await ReplyAsync("Sorry, you don't have permission to manage roles on this server.");
-                return;
-            }
-
-            target ??= guild.GetUser(Context.User.Id);
+            IGuildUser target = guild.GetUser(Context.User.Id);
 
             if (target == null) {
-                await ReplyAsync("That user doesn't seem to exist.");
+                await ReplyAsync($"Hmm, you don't seem to exist, {mu}.  That's odd.  (This is probably a bug, please report it.)");
                 return;
             }
 
             if (!await gcfg.IsManagedRoleAsync(role)) {
-                await ReplyAsync("It is not within my power to bestow that role.");
+                await ReplyAsync($"Sorry {mu}, it is not within my power to bestow `{role.Name}`.");
                 return;
             }
 
             if (await gcfg.IsAdminRoleAsync(role.Id)) {
-                await ReplyAsync("I cannot bestow this role because it is an admin role.");
+                await ReplyAsync($"Sorry, {mu}, I cannot bestow `{role.Name}` because it is an admin role.");
                 return;
             }
 
             if (target.RoleIds.Contains(role.Id)) {
-                if (target.Id == Context.User.Id)
-                    await ReplyAsync("You already have that role!");
-                else
-                    await ReplyAsync($"{Format.Sanitize(target.Username)} already has that role!");
+                await ReplyAsync($"You already have `{role.Name}`, {mu}.");
                 return;
             }
 
             await target.AddRoleAsync(role);
-            await ReplyAsync("Done!");
+            await ReplyAsync($"{mu}, you are now more `{role.Name}`.");
         }
 
         [Command("remove")]
-        [Summary("Remove a role from yourself or another user")]
+        [Summary("Remove a role from yourself")]
         [RequireContext(ContextType.Guild)]
         [RequireBotPermission(GuildPermission.ManageRoles)]
         public async Task Remove(
                 [Summary("The role to be removed")]
-                string roleName,
-                [Summary("The user who should lose the role, if not yourself")]
-                IGuildUser target = null) {
+                [Remainder]
+                string roleName) {
 
             var guild = Context.Guild;
             var gcfg = DB.GetGuild(Context.Guild);
             var guilduser = Context.Guild.GetUser(Context.User.Id);
+            var mu = MentionUtils.MentionUser(Context.User.Id);
 
-            if (target != null && !guilduser.GuildPermissions.ManageRoles && !await gcfg.IsAdminAsync(guilduser)) {
-                await ReplyAsync("Sorry, you don't have permission to remove roles from other users.");
-                return;
-            }
-
-            target ??= guild.GetUser(Context.User.Id);
+            IGuildUser target = guild.GetUser(Context.User.Id);
 
             if (target == null) {
-                await ReplyAsync("That user doesn't seem to exist.");
+                await ReplyAsync($"Hmm, you don't seem to exist, {mu}.  That's odd.  (This is probably a bug, please report it.)");
                 return;
             }
 
@@ -108,25 +94,22 @@ namespace Morgana {
             try {
                 role = guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
             } catch (InvalidOperationException) {
-                await ReplyAsync("Sorry, that role doesn't seem to exist.");
+                await ReplyAsync($"Sorry {mu}, I can't find a role called `{roleName}`.");
                 return;
             }
 
             if (!await gcfg.IsManagedRoleAsync(role)) {
-                await ReplyAsync("It is not within my power to remove that role.");
+                await ReplyAsync($"Sorry {mu}, it is not within my power to remove `{role.Name}`.");
                 return;
             }
 
             if (!target.RoleIds.Contains(role.Id)) {
-                if (target.Id == Context.User.Id)
-                    await ReplyAsync("I can't remove that role because you don't have it to begin with.");
-                else
-                    await ReplyAsync($"I can't remove that role because {Format.Sanitize(target.Username)} doesn't have it to begin with.");
+                await ReplyAsync($"Sorry {mu}, I can't remove `{role.Name}` because you don't have it to begin with.");
                 return;
             }
 
             await target.RemoveRoleAsync(role);
-            await ReplyAsync("Done!");
+            await ReplyAsync($"{mu}, you are now less `{role.Name}`.");
         }
 
 #if false
@@ -160,33 +143,35 @@ namespace Morgana {
         [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Manage(
             [Summary("The role that should be managed")]
+            [Remainder]
             string roleName) {
 
             var guilduser = Context.Guild.GetUser(Context.User.Id);
             var gcfg = DB.GetGuild(Context.Guild);
+            var mu = MentionUtils.MentionUser(Context.User.Id);
 
             IRole role;
             try {
                 role = Context.Guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
             } catch (InvalidOperationException) {
-                await ReplyAsync("Sorry, that role doesn't seem to exist.");
+                await ReplyAsync($"Sorry {mu}, I can't find a role called `{roleName}`.");
                 return;
             }
 
             if (role.Position >= guilduser.Hierarchy) {
-                await ReplyAsync("Sorry, you can't manage a role that you don't have permission to bestow.");
+                await ReplyAsync($"Sorry {mu}, you can't make `{role.Name}` managed because you don't have permission to bestow it.");
                 return;
             }
 
             if (await gcfg.IsAdminRoleAsync(role.Id)) {
-                await ReplyAsync("Sorry, I will not manage a role marked as an admin role.");
+                await ReplyAsync($"Sorry {mu}, I will not manage `{role.Name}` because it's marked as an admin role.");
                 return;
             }
 
             if (await gcfg.ManagedRoleAddAsync(role))
-                await ReplyAsync("Done!");
+                await ReplyAsync($"{mu}, I will now manage `{role.Name}`.");
             else
-                await ReplyAsync("I am already managing that role.");
+                await ReplyAsync($"{mu}, I am already managing `{role.Name}`.");
         }
 
         [Command("unmanage")]
@@ -195,28 +180,30 @@ namespace Morgana {
         [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Unmanage(
             [Summary("The role that should be unmanaged")]
+            [Remainder]
             string roleName) {
 
             var guilduser = Context.Guild.GetUser(Context.User.Id);
             var gcfg = DB.GetGuild(Context.Guild);
+            var mu = MentionUtils.MentionUser(Context.User.Id);
 
             IRole role;
             try {
                 role = Context.Guild.Roles.First(r => r.Name.ToLower() == roleName.ToLower());
             } catch (InvalidOperationException) {
-                await ReplyAsync("Sorry, that role doesn't seem to exist.");
+                await ReplyAsync($"Sorry {mu}, I can't find a role called `{roleName}`.");
                 return;
             }
 
             if (role.Position >= guilduser.Hierarchy) {
-                await ReplyAsync("Sorry, you can't manage a role that you don't have permission to bestow.");
+                await ReplyAsync($"Sorry {mu}, you can't make `{role.Name}` unmanaged because you don't have permission to bestow it.");
                 return;
             }
 
             if (await gcfg.ManagedRoleRemoveAsync(role))
-                await ReplyAsync("Done!");
+                await ReplyAsync($"{mu}, I will no longer manage `{role.Name}`.");
             else
-                await ReplyAsync("I am not managing that role.");
+                await ReplyAsync($"{mu}, I am not managing `{role.Name}`.");
         }
 
         [Command("list")]
