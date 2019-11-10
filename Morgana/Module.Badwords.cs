@@ -18,6 +18,7 @@ using Discord.WebSocket;
 using System.Text.RegularExpressions;
 using Discord;
 using Microsoft.Extensions.DependencyInjection;
+using System.Resources;
 
 namespace Morgana {
 
@@ -40,7 +41,9 @@ namespace Morgana {
                 return;
             }
 
-            var str = String.Join(", ", words.Select(x => $"`{Format.Sanitize(x)}`"));
+            var str = string.Join(", ", 
+                words.Select(x => 
+                    x.IsRegex ? $"`/{Format.Sanitize(x.Badword)}/`" : $"`{Format.Sanitize(x.Badword)}`"));
             await ReplyAsync($"Current bad words list: {str}.");
         }
 
@@ -51,22 +54,45 @@ namespace Morgana {
         public async Task Add([Summary("The bad words to add")] params string[] words) {
             var guild = Context.Guild;
             var gcfg = DB.GetGuild(guild);
+            var mu = MentionUtils.MentionUser(Context.User.Id);
 
-            var existing = new List<string>();
+            var existing = new List<(string, bool)>();
             int added = 0;
 
+            var bwords = new List<(string, bool)>();
             foreach (var word in words.Select(w => w.ToLower())) {
-                if (await gcfg.BadwordAddAsync(word))
+                if (word.StartsWith('/')) {
+                    if (!word.EndsWith('/')) {
+                        await ReplyAsync($"{mu}, I couldn't add `{Format.Sanitize(word)}`, because it started with a " +
+                            $"slash but did not end with a slash.  If you wanted to add a regex, use `/word/`." +
+                            $"  Otherwise, remove the slash as it will never match anyway.");
+                        return;
+                    }
+
+                    var rw = word.Substring(1, word.Length - 2);
+                    bwords.Add((rw, true));
+                } else {
+                    bwords.Add((word, false));
+                }
+            }
+
+            foreach (var bw in bwords) {
+                var (w, isregex) = bw;
+                if (await gcfg.BadwordAddAsync(w, isregex))
                     added++;
                 else
-                    existing.Add(word);
+                    existing.Add(bw);
             }
 
             if (existing.Count() == 0)
-                await ReplyAsync("Done!");
+                await ReplyAsync($"{mu}, I added {added} words to the bad words list.");
             else {
-                var existingstr = string.Join(", ", existing.Select(x => $"`{Format.Sanitize(x)}`"));
-                await ReplyAsync($"Added {added} words to the bad words list.  The following words are already in the filter: {existingstr}.");
+                var existingstr = string.Join(", ", 
+                    existing.Select(x => {
+                        var (w, isregex) = x;
+                        return isregex ? $"`/{Format.Sanitize(w)}/`" : $"`{Format.Sanitize(w)}`";
+                    }));
+                await ReplyAsync($"{mu}, I added {added} words to the bad words list.  The following words are already in the filter: {existingstr}.");
             }
         }
 
@@ -77,21 +103,38 @@ namespace Morgana {
         public async Task Remove([Summary("The bad words to remove")] params string[] words) {
             var guild = Context.Guild;
             var gcfg = DB.GetGuild(guild);
+            var mu = MentionUtils.MentionUser(Context.User.Id);
 
-            var notfound = new List<string>();
+            var notfound = new List<(string, bool)>();
             int removed = 0;
 
             foreach (var word in words.Select(w => w.ToLower())) {
-                if (await gcfg.BadwordRemoveAsync(word))
-                    removed++;
-                else
-                    notfound.Add(word);
+                if (word.StartsWith('/')) {
+                    if (!word.EndsWith('/')) {
+                        notfound.Add((word, true));
+                    } else {
+                        var rw = word.Substring(1, word.Length - 2);
+                        if (await gcfg.BadwordRemoveAsync(rw, true))
+                            removed++;
+                        else
+                            notfound.Add((rw, true));
+                    }
+                } else {
+                    if (await gcfg.BadwordRemoveAsync(word, false))
+                        removed++;
+                    else
+                        notfound.Add((word, false));
+                }
             }
 
             if (notfound.Count() == 0)
-                await ReplyAsync("Done!");
+                await ReplyAsync($"{mu}, I removed {removed} words from the bad words list.");
             else {
-                var notfoundstr = string.Join(", ", notfound.Select(x => $"`{Format.Sanitize(x)}`"));
+                var notfoundstr = string.Join(", ",
+                    notfound.Select(x => {
+                        var (w, isregex) = x;
+                        return isregex ? $"`/{Format.Sanitize(w)}/`" : $"`{Format.Sanitize(w)}`";
+                    }));
                 await ReplyAsync($"Removed {removed} words from the bad words list.  The following words are not in the filter: {notfoundstr}.");
             }
         }
@@ -206,7 +249,7 @@ namespace Morgana {
             var re = new Regex(@"\b");
             var words = re.Split(message.Content);
 
-            if (await gcfg.IsAnyBadwordAsync(words)) {
+            if (await gcfg.MatchAnyBadwordAsync(words)) {
                 await message.DeleteAsync();
 
                 var msg = await gcfg.GetBadwordsMessageAsync();

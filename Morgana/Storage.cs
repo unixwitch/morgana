@@ -31,6 +31,7 @@ using EFSecondLevelCache.Core;
 using EFSecondLevelCache.Core.Contracts;
 using Microsoft.Data.SqlClient;
 using Npgsql;
+using System.Text.RegularExpressions;
 
 namespace Morgana {
     public class StorageContext : DbContext {
@@ -41,7 +42,7 @@ namespace Morgana {
         public DbSet<GuildBadword> GuildBadwords { get; set; }
         public DbSet<GuildFactoid> GuildFactoids { get; set; }
         public DbSet<BotOwner> BotOwners { get; set; }
-        
+
         public StorageContext(DbContextOptions<StorageContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder mb) {
@@ -219,6 +220,9 @@ namespace Morgana {
         [Required]
         [MaxLength(20)]
         public string GuildId { get; set; }
+
+        [Required]
+        public bool IsRegex { get; set; }
 
         [Required]
         [MaxLength(64)]
@@ -456,17 +460,20 @@ namespace Morgana {
         public Task<string> GetBadwordsMessageAsync() => GetOptionAsync("badwords-message");
         public Task SetBadwordsMessageAsync(string m) => SetOptionAsync("badwords-message", m);
 
-        public Task<List<string>> GetBadwordsAsync() {
+        public Task<List<GuildBadword>> GetBadwordsAsync() {
             return _db.GuildBadwords
                 .Where(bw => bw.GuildId == _guild.Id.ToString())
-                .Select(bw => bw.Badword.ToLower())
                 .Cacheable()
                 .ToListAsync();
         }
 
-        public async Task<bool> BadwordAddAsync(string w) {
+        public async Task<bool> BadwordAddAsync(string w, bool isregex) {
             try {
-                var o = new GuildBadword { GuildId = _guild.Id.ToString(), Badword = w.ToLower() };
+                var o = new GuildBadword {
+                    GuildId = _guild.Id.ToString(),
+                    Badword = w.ToLower(),
+                    IsRegex = isregex
+                };
                 _db.GuildBadwords.Add(o);
                 await _db.SaveChangesAsync();
                 return true;
@@ -476,11 +483,12 @@ namespace Morgana {
             }
         }
 
-        public async Task<bool> BadwordRemoveAsync(string w) {
+        public async Task<bool> BadwordRemoveAsync(string w, bool isregex) {
             GuildBadword ga = null;
 
             try {
-                ga = await _db.GuildBadwords.Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w.ToLower()).SingleAsync();
+                ga = await _db.GuildBadwords
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w.ToLower() && a.IsRegex == isregex).SingleAsync();
             } catch (InvalidOperationException) {
                 return false;
             }
@@ -490,13 +498,41 @@ namespace Morgana {
             return true;
         }
 
-        public async Task<bool> IsBadwordAsync(string w) {
-            return (await GetBadwordsAsync()).Where(bw => bw == w.ToLower()).Any();
+        public async Task<bool> IsBadwordAsync(string w, bool isregex) {
+            var badwords = await GetBadwordsAsync();
+
+            if (badwords.Where(bw => bw.IsRegex == isregex && bw.Badword.ToLower() == w.ToLower()).Any())
+                return true;
+
+            return false;
         }
 
-        public async Task<bool> IsAnyBadwordAsync(string[] ws) {
+        public async Task<bool> MatchAnyBadwordAsync(string[] ws) {
             var badwords = await GetBadwordsAsync();
-            return ws.Any(w => badwords.Contains(w.ToLower()));
+
+            var strings = badwords.Where(bw => bw.IsRegex == false).Select(bw => bw.Badword);
+            if (ws.Any(w => strings.Contains(w.ToLower())))
+                return true;
+
+            var regexs = badwords.Where(bw => bw.IsRegex == true).Select(bw => bw.Badword);
+            if (ws.Any(w => regexs.Any(r => Regex.Match(w.ToLower(), r).Success)))
+                return true;
+
+            return false;
+        }
+
+        public async Task<bool> MatchBadwordAsync(string w) {
+            var badwords = await GetBadwordsAsync();
+
+            var strings = badwords.Where(bw => bw.IsRegex == false).Select(bw => bw.Badword);
+            if (strings.Contains(w))
+                return true;
+
+            var regexs = badwords.Where(bw => bw.IsRegex == true).Select(bw => bw.Badword);
+            if (regexs.Any(r => Regex.Match(w.ToLower(), r).Success))
+                return true;
+
+            return false;
         }
 
         /*

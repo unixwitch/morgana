@@ -33,14 +33,21 @@ namespace Morgana {
         [Summary("Check the spelling of a word or sentence")]
         public async Task SpellCheckAsync([Summary("The word or sentence to check")][Remainder] string word) {
             if (word.IndexOfAny(new char[] { ' ', '\n', '\r', '\t' }) == -1) {
-                List<string> badwords = new List<string>();
+                var badwords = new List<GuildBadword>();
                 if (Context.Guild != null) {
                     var gcfg = DB.GetGuild(Context.Guild);
                     if (await gcfg.IsBadwordsEnabledAsync())
                         badwords = await gcfg.GetBadwordsAsync();
                 }
 
-                var results = (await Speller.CheckWord(word)).Where(w => !badwords.Contains(w.term)).Select(w => w.term).Take(10).ToList();
+                var results = (await Speller.CheckWord(word))
+                    .Where(w => !badwords.Any(bw =>
+                        (bw.IsRegex == false && bw.Badword == w.term.ToLower())
+                        || (bw.IsRegex == true && Regex.Match(w.term.ToLower(), bw.Badword.ToLower()).Success)))
+                    .Select(w => w.term)
+                    .Take(10)
+                    .ToList();
+
                 if (results.Count() == 0)
                     await ReplyAsync($"{MentionUtils.MentionUser(Context.User.Id)}, I couldn't find any suggestions for \"{Format.Sanitize(word)}\".");
                 else if (results[0] == word)
@@ -67,10 +74,9 @@ namespace Morgana {
                     var gcfg = DB.GetGuild(Context.Guild);
 
                     if (await gcfg.IsBadwordsEnabledAsync()) {
-                        var badwords = await gcfg.GetBadwordsAsync();
                         var splitwords = new Regex(@"\b").Split(suggestion.term);
 
-                        if (splitwords.Where(w => badwords.Contains(w)).Any()) {
+                        if (await gcfg.MatchAnyBadwordAsync(splitwords)) {
                             await ReplyAsync($"Sorry {MentionUtils.MentionUser(Context.User.Id)}, I can't spell that... it has a bad word in it!");
                             return;
                         }
