@@ -49,7 +49,7 @@ namespace Morgana {
             mb.Entity<GuildAdmin>().HasIndex(ga => new { ga.GuildId, ga.AdminId }).IsUnique();
             mb.Entity<GuildOption>().HasIndex(go => new { go.GuildId, go.Option }).IsUnique();
             mb.Entity<GuildManagedRole>().HasIndex(gmr => new { gmr.GuildId, gmr.RoleId }).IsUnique();
-            mb.Entity<GuildBadword>().HasIndex(gbw => new { gbw.GuildId, gbw.Badword }).IsUnique();
+            mb.Entity<GuildBadword>().HasIndex(gbw => new { gbw.GuildId, gbw.Badword, gbw.IsRegex }).IsUnique();
             mb.Entity<GuildFactoid>().HasIndex(gf => new { gf.GuildId, gf.Name }).IsUnique();
             mb.Entity<BotOwner>().HasIndex(bo => bo.OwnerId).IsUnique();
         }
@@ -488,7 +488,8 @@ namespace Morgana {
 
             try {
                 ga = await _db.GuildBadwords
-                    .Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w.ToLower() && a.IsRegex == isregex).SingleAsync();
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w.ToLower() && a.IsRegex == isregex)
+                    .SingleAsync();
             } catch (InvalidOperationException) {
                 return false;
             }
