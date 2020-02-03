@@ -104,9 +104,11 @@ namespace Morgana {
          */
         public async Task<IList<ulong>> GetOwnersAsync() {
             return await BotOwners
-                    .Select(o => ulong.Parse(o.OwnerId))
-                    .Cacheable()
-                    .ToListAsync();
+                .AsQueryable()
+                .Select(o => ulong.Parse(o.OwnerId))
+                .Cacheable()
+                .AsQueryable()
+                .ToListAsync();
         }
 
         // This takes a ulong so we can add the initial owner before the client has started.
@@ -126,6 +128,7 @@ namespace Morgana {
 
             try {
                 ga = await BotOwners
+                    .AsQueryable()
                     .Where(o => o.OwnerId == id.ToString())
                     .SingleAsync();
             } catch (InvalidOperationException) {
@@ -260,8 +263,10 @@ namespace Morgana {
         protected async Task<string> GetOptionAsync(string option) {
             try {
                 var opts = await _db.GuildOptions
+                    .AsQueryable()
                     .Where(opt => opt.GuildId == _guild.Id.ToString())
                     .Cacheable()
+                    .AsQueryable()
                     .ToListAsync();
                 return opts
                     .Where(opt => opt.Option == option)
@@ -276,7 +281,10 @@ namespace Morgana {
             GuildOption opt;
 
             try {
-                opt = _db.GuildOptions.Where(opt => opt.GuildId == _guild.Id.ToString() && opt.Option == option).Single();
+                opt = await _db.GuildOptions
+                    .AsQueryable()
+                    .Where(opt => opt.GuildId == _guild.Id.ToString() && opt.Option == option)
+                    .SingleAsync();
                 opt.Value = value;
             } catch (InvalidOperationException) {
                 opt = new GuildOption { GuildId = _guild.Id.ToString(), Option = option, Value = value };
@@ -317,9 +325,11 @@ namespace Morgana {
          */
         public async Task<IList<ulong>> GetAdminUsersAsync() {
             return await _db.GuildAdmins
+                    .AsQueryable()
                     .Where(ga => ga.GuildId == _guild.Id.ToString())
                     .Select(ga => ulong.Parse(ga.AdminId))
                     .Cacheable()
+                    .AsQueryable()
                     .ToListAsync();
         }
 
@@ -339,6 +349,7 @@ namespace Morgana {
 
             try {
                 ga = await _db.GuildAdmins
+                    .AsQueryable()
                     .Where(a => a.GuildId == _guild.Id.ToString() && a.AdminId == id.ToString())
                     .SingleAsync();
             } catch (InvalidOperationException) {
@@ -356,9 +367,11 @@ namespace Morgana {
 
         public async Task<IList<ulong>> GetAdminRolesAsync() {
             return await _db.GuildAdminRoles
+                    .AsQueryable()
                     .Where(ga => ga.GuildId == _guild.Id.ToString())
                     .Select(ga => ulong.Parse(ga.RoleId))
                     .Cacheable()
+                    .AsQueryable()
                     .ToListAsync();
         }
 
@@ -378,6 +391,7 @@ namespace Morgana {
 
             try {
                 ga = await _db.GuildAdminRoles
+                    .AsQueryable()
                     .Where(a => a.GuildId == _guild.Id.ToString() && a.RoleId == id.ToString())
                     .SingleAsync();
             } catch (InvalidOperationException) {
@@ -407,9 +421,11 @@ namespace Morgana {
         public Task<List<IRole>> GetManagedRolesAsync() {
             return
                 _db.GuildManagedRoles
+                    .AsQueryable()
                     .Where(mr => mr.GuildId == _guild.Id.ToString())
                     .Select(mr => _guild.GetRole(ulong.Parse(mr.RoleId)))
                     .Cacheable()
+                    .AsQueryable()
                     .ToListAsync();
         }
 
@@ -428,7 +444,10 @@ namespace Morgana {
             GuildManagedRole ga = null;
 
             try {
-                ga = await _db.GuildManagedRoles.Where(a => a.GuildId == _guild.Id.ToString() && a.RoleId == role.Id.ToString()).SingleAsync();
+                ga = await _db.GuildManagedRoles
+                    .AsQueryable()
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.RoleId == role.Id.ToString())
+                    .SingleAsync();
             } catch (InvalidOperationException) {
                 return false;
             }
@@ -462,8 +481,10 @@ namespace Morgana {
 
         public Task<List<GuildBadword>> GetBadwordsAsync() {
             return _db.GuildBadwords
+                .AsQueryable()
                 .Where(bw => bw.GuildId == _guild.Id.ToString())
                 .Cacheable()
+                .AsQueryable()
                 .ToListAsync();
         }
 
@@ -488,6 +509,7 @@ namespace Morgana {
 
             try {
                 ga = await _db.GuildBadwords
+                    .AsQueryable()
                     .Where(a => a.GuildId == _guild.Id.ToString() && a.Badword == w.ToLower() && a.IsRegex == isregex)
                     .SingleAsync();
             } catch (InvalidOperationException) {
@@ -583,8 +605,10 @@ namespace Morgana {
         public async Task<string> FactoidGetAsync(string name) {
             try {
                 return (await _db.GuildFactoids
+                    .AsQueryable()
                     .Where(f => f.GuildId == _guild.Id.ToString() && f.Name == name.ToLower())
                     .Cacheable()
+                    .AsQueryable()
                     .SingleAsync())
                     .Value;
             } catch (InvalidOperationException) {
@@ -596,7 +620,10 @@ namespace Morgana {
             GuildFactoid f;
 
             try {
-                f = _db.GuildFactoids.Where(f => f.GuildId == _guild.Id.ToString() && f.Name == name.ToLower()).Single();
+                f = await _db.GuildFactoids
+                    .AsQueryable()
+                    .Where(f => f.GuildId == _guild.Id.ToString() && f.Name == name.ToLower())
+                    .SingleAsync();
                 f.Value = value;
             } catch (InvalidOperationException) {
                 f = new GuildFactoid { GuildId = _guild.Id.ToString(), Name = name.ToLower(), Value = value };
@@ -610,7 +637,10 @@ namespace Morgana {
             GuildFactoid f = null;
 
             try {
-                f = await _db.GuildFactoids.Where(a => a.GuildId == _guild.Id.ToString() && a.Name == key.ToLower()).SingleAsync();
+                f = await _db.GuildFactoids
+                    .AsQueryable()
+                    .Where(a => a.GuildId == _guild.Id.ToString() && a.Name == key.ToLower())
+                    .SingleAsync();
             } catch (InvalidOperationException) {
                 return false;
             }

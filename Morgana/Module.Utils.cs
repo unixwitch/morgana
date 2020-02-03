@@ -223,33 +223,23 @@ namespace Morgana {
 
             var footer = $"User ID: {target.Id}";
 
-            Color c = new Color(116, 127, 141);
-            string status = target.Status.ToString();
-
-            switch (target.Status) {
-                case UserStatus.Online:
-                    c = new Color(67, 181, 129);
-                    break;
-                case UserStatus.AFK:
-                case UserStatus.Idle:
-                    c = new Color(250, 166, 26);
-                    break;
-                case UserStatus.DoNotDisturb:
-                    c = new Color(240, 71, 71);
-                    status = "Do not disturb";
-                    break;
-                case UserStatus.Offline:
-                case UserStatus.Invisible:
-                    c = new Color(116, 127, 141);
-                    break;
-            }
+            var (statusColor, statusText) = target.Status switch
+            {
+                UserStatus.Online => (new Color(67, 181, 129), "Online"),
+                UserStatus.AFK => (new Color(250, 166, 26), "AFK"),
+                UserStatus.Idle => (new Color(250, 166, 26), "Idle"),
+                UserStatus.DoNotDisturb => (new Color(240, 71, 71), "Do not disturb"),
+                UserStatus.Offline => (new Color(116, 127, 141), "Offline"),
+                UserStatus.Invisible => (new Color(116, 127, 141), "Invisible"),
+                _ => (new Color(116, 127, 141), target.Status.ToString()),
+            };
 
             var builder =
                 new EmbedBuilder()
                     .WithThumbnailUrl(target.GetAvatarUrl())
-                    .WithColor(c);
+                    .WithColor(statusColor);
 
-            builder.AddField($"**{Format.Sanitize(target.ToString())}**", status);
+            builder.AddField($"**{Format.Sanitize(target.ToString())}**", statusText);
 
             if (target.Activity != null) {
                 var activityType = target.Activity.Type;
@@ -266,6 +256,11 @@ namespace Morgana {
                         var track = $"[{trackTitle}]({trackUrl})";
                         activity = $"{artists} - {track} (on {album})";
                         builder.AddField($"**Listening to**", activity);
+                        break;
+
+                    case CustomStatusGame custom:
+                        activity = $"{custom.ToString()}";
+                        builder.AddField("**Custom status**", Format.Sanitize(activity));
                         break;
 
                     case Game game:
