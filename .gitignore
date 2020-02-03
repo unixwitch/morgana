@@ -1,7 +1,10 @@
 */bin
 */obj
+*/dist
 /.vs
 vars.json
 config.ini
 *.db
 *.user
+*.7z
+*.zip

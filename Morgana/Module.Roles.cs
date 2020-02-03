@@ -24,6 +24,8 @@ namespace Morgana {
 
         [Command("add")]
         [Summary("Bestow a role upon yourself")]
+        [Remarks("For example, to give yourself the role \"Awesome Role\", use:\n"
+                + "```<cmd> Awesome Role```\n")]
         [RequireContext(ContextType.Guild)]
         [RequireBotPermission(GuildPermission.ManageRoles)]
         public async Task Add(
@@ -71,6 +73,8 @@ namespace Morgana {
 
         [Command("remove")]
         [Summary("Remove a role from yourself")]
+        [Remarks("For example, to renounce the role \"Awesome Role\", use:\n"
+                + "```<cmd> Awesome Role```\n")]
         [RequireContext(ContextType.Guild)]
         [RequireBotPermission(GuildPermission.ManageRoles)]
         public async Task Remove(
@@ -139,6 +143,8 @@ namespace Morgana {
 
         [Command("manage")]
         [Summary("Allow users to bestow or remove this role on themselves")]
+        [Remarks("For example, to allow users to bestow \"Awesome Role\" on themselves, use:\n"
+                + "```<cmd> Awesome Role```\n")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Manage(
@@ -176,6 +182,8 @@ namespace Morgana {
 
         [Command("unmanage")]
         [Summary("Prevent users bestowing or removing this role on themselves")]
+        [Remarks("For example, to disallow users bestowing \"Awesome Role\" on themselves, use:\n"
+                + "```<cmd> Awesome Role```\n")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Unmanage(

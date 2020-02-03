@@ -25,71 +25,76 @@ namespace Morgana {
         public StorageContext DB { get; set; }
         public IServiceProvider Services { get; set; }
 
-        public async Task<bool> UserCanRunCommand(ICommandContext ctx, CommandInfo command) {
-            var res = await command.CheckPreconditionsAsync(ctx, Services);
+        [Command("help")]
+        [Summary("Ask me about my commands")]
+        public async Task Help([Remainder] string command = null) {
+            var (text, embed) = await ShowHelp(Services, Context, DB, Commands, command);
+            await ReplyAsync(message: text, embed: embed);
+        }
+
+        public static async Task<bool> UserCanRunCommand(IServiceProvider services, ICommandContext ctx, CommandInfo command) {
+            var res = await command.CheckPreconditionsAsync(ctx, services);
             return res.IsSuccess;
         }
 
-        public async Task<bool> UserCanRunModule(ICommandContext ctx, ModuleInfo mod) {
+        public static async Task<bool> UserCanRunModule(IServiceProvider services, ICommandContext ctx, ModuleInfo mod) {
             foreach (var cmd in mod.Commands)
-                if (await UserCanRunCommand(ctx, cmd))
+                if (await UserCanRunCommand(services, ctx, cmd))
                     return true;
 
             foreach (var submod in mod.Submodules)
-                if (await UserCanRunModule(ctx, submod))
+                if (await UserCanRunModule(services, ctx, submod))
                     return true;
 
             return false;
         }
 
-        [Command("help")]
-        [Summary("Ask me about my commands")]
-        public async Task Help([Remainder] string command = null) {
+        public static async Task<(string, Embed)> ShowHelp(IServiceProvider services, SocketCommandContext ctx, StorageContext DB, CommandService cmds, string command) { 
             string reply;
             string prefix = "";
             GuildConfig gcfg = null;
             EmbedBuilder embed = null;
 
-            if (Context.Guild != null) {
-                gcfg = DB.GetGuild(Context.Guild);
+            if (ctx.Guild != null) {
+                gcfg = DB.GetGuild(ctx.Guild);
                 prefix = await gcfg.GetCommandPrefixAsync() ?? "~";
             }
 
-            if (command == null) {
-                reply = $"I know about the following commands; use `{prefix}help <command>` for more details:";
+            var muser = MentionUtils.MentionUser(ctx.User.Id);
 
-                foreach (var mod in Commands.Modules) {
+            if (command == null) {
+                reply = $"{muser}, I know about the following commands; use `{prefix}help <command>` for more details:";
+
+                foreach (var mod in cmds.Modules) {
                     if (mod.Parent != null)
                         continue;
-                    if (!await UserCanRunModule(Context, mod))
+                    if (!await UserCanRunModule(services, ctx, mod))
                         continue;
 
                     if (mod.Group != null)
                         reply += $"\n`{prefix}{mod.Group}` - {mod.Summary}.";
                     else
                         foreach (var cmd in mod.Commands)
-                            if (await UserCanRunCommand(Context, cmd))
+                            if (await UserCanRunCommand(services, ctx, cmd))
                                 reply += $"\n`{prefix}{cmd.Name}` - {cmd.Summary}.";
                 }
 
-                await ReplyAsync(reply);
-                return;
+                return (reply, null);
             }
 
             if (command.StartsWith(prefix))
                 command = command.Substring(prefix.Length);
 
-            var sr = Commands.Search(command);
+            var sr = cmds.Search(command);
 
             if (sr.Error != null) {
                 var bits = command.Split(" ");
 
                 ModuleInfo minfo;
                 try {
-                    minfo = Commands.Modules.First(m => m.Name == bits[0]);
+                    minfo = cmds.Modules.First(m => m.Name == bits[0]);
                 } catch (InvalidOperationException) {
-                    await ReplyAsync("I don't recognise that command.");
-                    return;
+                    return ("{muser}, I don't recognise that command.", null);
                 }
                 var matched = minfo.Name;
 
@@ -98,8 +103,7 @@ namespace Morgana {
                         minfo = minfo.Submodules.First(m => m.Name == bits[i]);
                         matched += " " + bits[i];
                     } catch (InvalidOperationException) {
-                        await ReplyAsync($"I couldn't find any matching commands for \"{command}\"; matched: \"{matched}\"");
-                        return;
+                        return ($"{muser}, I couldn't find any matching commands for \"{command}\"; matched: \"{matched}\"", null);
                     }
                 }
 
@@ -108,15 +112,14 @@ namespace Morgana {
 
                 string commands = "";
                 foreach (var mod in minfo.Submodules)
-                    if (await UserCanRunModule(Context, mod))
+                    if (await UserCanRunModule(services, ctx, mod))
                         commands += $"\n`{prefix}{matched} {mod.Name}` - {mod.Summary}.";
                 foreach (var cmd in minfo.Commands)
-                    if (await UserCanRunCommand(Context, cmd))
+                    if (await UserCanRunCommand(services, ctx, cmd))
                         commands += $"\n`{prefix}{matched} {cmd.Name}` - {cmd.Summary}.";
                 embed.AddField("**Commands**", commands);
 
-                await ReplyAsync(embed: embed.Build());
-                return;
+                return (muser, embed.Build());
             }
 
             var info = sr.Commands[0];
@@ -163,7 +166,10 @@ namespace Morgana {
             if (parmHelp.Length > 0)
                 embed.AddField("**Parameters**", parmHelp);
 
-            await ReplyAsync(embed: embed.Build());
+            if (info.Command.Remarks is string remarks)
+                embed.AddField("**Remarks**", remarks.Replace("<cmd>", cmdName).Replace("<muser>", muser));
+
+            return (muser, embed.Build());
         }
     }
 }

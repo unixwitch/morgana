@@ -62,6 +62,7 @@ namespace Morgana {
 
         [Command("say", RunMode = RunMode.Async)]
         [Summary("Make me say something")]
+        [Remarks("For example:\n```<cmd> #goodchannel This channel is so good!```\n")]
         [RequireContext(ContextType.Guild)]
         [RequireBotAdmin]
         public async Task Say([Summary("The channel I should talk in")] ITextChannel channel,
@@ -94,9 +95,20 @@ namespace Morgana {
 
         [Command("choose", RunMode = RunMode.Async)]
         [Summary("Choose one of a list of options")]
+        [Remarks("You can list any number of choices, but fewer than two is unlikely to be"
+                + " useful unless you are _really_ indecisive.  A choice that contains spaces"
+                + " must be enclosed in \"double quotes\", for example:\n"
+                + "```<cmd> \"Go to the shops\" \"Stay at home\" \"Burn down the trailer park\"```")]
         public async Task Choose([Summary("The options to choose from")] params string[] options) {
-            string opt = options[new Random().Next(0, options.Length)];
-            await ReplyAsync("`" + Format.Sanitize(opt) + "`");
+            var muser = MentionUtils.MentionUser(Context.User.Id);
+
+            if (options.Length == 0) {
+                await ReplyAsync($"{muser}, you need to specify at least one option!");
+                return;
+            }
+
+            string opt = Format.Sanitize(options[new Random().Next(0, options.Length)]);
+            await ReplyAsync($"{muser}, `{opt}`");
         }
 
         static Dictionary<char, char> flips;
@@ -272,7 +284,6 @@ namespace Morgana {
                         builder.AddField($"**Doing**", Format.Sanitize(target.Activity.ToString()));
                         break;
                 }
-
             }
 
             var embed = builder

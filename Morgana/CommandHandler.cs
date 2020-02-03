@@ -23,24 +23,27 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Morgana {
     public class CommandHandler {
-        private DiscordSocketClient _client;
-        private CommandService _commands;
-        private IServiceProvider _services;
-        private BadwordsFilter _filter;
-        private InfobotService _infobot;
+        private readonly DiscordSocketClient _client;
+        private readonly CommandService _commands;
+        private readonly IServiceProvider _services;
+        private readonly BadwordsFilter _filter;
+        private readonly InfobotService _infobot;
+        private readonly StorageContext _db;
 
         public CommandHandler(
             DiscordSocketClient client,
             CommandService commands,
             IServiceProvider services,
             BadwordsFilter filter,
-            InfobotService infobot) {
+            InfobotService infobot,
+            StorageContext db) {
 
             _client = client;
             _commands = commands;
             _services = services;
             _filter = filter;
             _infobot = infobot;
+            _db = db;
         }
 
         public async Task InitializeAsync() {
@@ -66,13 +69,23 @@ namespace Morgana {
 
             int argpos = 0;
             var channel = message.Channel as SocketGuildChannel;
+            string pfx = "";
+
             if (channel != null) {
                 var gcfg = db.GetGuild(channel.Guild);
-                var pfx = await gcfg.GetCommandPrefixAsync() ?? "~";
+                pfx = await gcfg.GetCommandPrefixAsync() ?? "~";
+
+                // If the command prefix is by itself on the line, ignore it.
+                if (pfx.Length >= message.Content.Length)
+                    return;
 
                 // If the command prefix is doubled, ignore it.  This avoids responding to formatting at
                 // the start of the line, e.g. ~~ or **.
                 if (pfx.Length == 1 && message.Content.Length >= 2 && message.Content[1] == pfx[0])
+                    return;
+
+                // If the command prefix is followed by whitespace, ignore it.
+                if (message.Content.Length >= (pfx.Length + 1) && Char.IsWhiteSpace(message.Content[pfx.Length]))
                     return;
 
                 if (!(message.HasStringPrefix(pfx, ref argpos)) || message.HasMentionPrefix(_client.CurrentUser, ref argpos))
@@ -82,8 +95,20 @@ namespace Morgana {
             var context = new SocketCommandContext(_client, message);
             var result = await _commands.ExecuteAsync(context, argpos, _services);
 
-            if (!result.IsSuccess)
-                await context.Channel.SendMessageAsync(result.ErrorReason);
+            if (!result.IsSuccess) {
+                Console.WriteLine($"error = [{result.Error}]");
+                switch (result.Error) {
+                    case CommandError.BadArgCount:
+                    case CommandError.UnknownCommand:
+                        var (text, embed) = await HelpModule.ShowHelp(_services, context, _db, _commands, message.Content);
+                        await context.Channel.SendMessageAsync(text: text, embed: embed);
+                        return;
+
+                    default:
+                        await context.Channel.SendMessageAsync($"{MentionUtils.MentionUser(message.Author.Id)}, {result.ErrorReason}");
+                        break;
+                }
+            }
         }
     }
 }
