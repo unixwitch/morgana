@@ -1,6 +1,6 @@
 ﻿/*
  * Morgana - a Discord bot.
- * Copyright(c) 2019 Felicity Tarnell <ft@le-fay.org>.
+ * Copyright(c) 2019, 2020 Felicity Tarnell <ft@le-fay.org>.
  *
  * Permission is granted to anyone to use this software for any purpose,
  * including commercial applications, and to alter it and redistribute it
@@ -21,13 +21,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
-using EFSecondLevelCache;
-using EFSecondLevelCache.Core;
 using CacheManager.Core;
 using CacheManager.MicrosoftCachingMemory;
 using Newtonsoft.Json;
-using EFSecondLevelCache.Core.Contracts;
 using System.Linq;
+using EFCoreSecondLevelCacheInterceptor;
 
 namespace Morgana {
     public class RequireBotOwnerAttribute : PreconditionAttribute {
@@ -84,7 +82,13 @@ namespace Morgana {
 
             using var services =
                 new ServiceCollection()
-                    .AddEFSecondLevelCache()
+                    .AddLogging()
+                    //.AddSingleton<MemoryCacheServiceProvider>()
+                    .AddEFSecondLevelCache(options => {
+                        //options.UseMemoryCacheProvider();
+                        options.UseCustomCacheProvider<MemoryCacheServiceProvider>();
+                        options.CacheAllQueries(CacheExpirationMode.Sliding, TimeSpan.FromMinutes(30));
+                    })
                     .AddSingleton(typeof(ICacheManagerConfiguration),
                         new CacheManager.Core.ConfigurationBuilder()
                             .WithJsonSerializer()

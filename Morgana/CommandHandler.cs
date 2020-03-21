@@ -85,10 +85,12 @@ namespace Morgana {
                     return;
 
                 // If the command prefix is followed by whitespace, ignore it.
-                if (message.Content.Length >= (pfx.Length + 1) && Char.IsWhiteSpace(message.Content[pfx.Length]))
+                if (message.Content.Length >= (pfx.Length + 1) 
+                    && Char.IsWhiteSpace(message.Content[pfx.Length]))
                     return;
 
-                if (!(message.HasStringPrefix(pfx, ref argpos)) || message.HasMentionPrefix(_client.CurrentUser, ref argpos))
+                if (!(message.HasStringPrefix(pfx, ref argpos)) 
+                    || message.HasMentionPrefix(_client.CurrentUser, ref argpos))
                     return;
             }
 
@@ -96,16 +98,17 @@ namespace Morgana {
             var result = await _commands.ExecuteAsync(context, argpos, _services);
 
             if (!result.IsSuccess) {
-                Console.WriteLine($"error = [{result.Error}]");
                 switch (result.Error) {
                     case CommandError.BadArgCount:
                     case CommandError.UnknownCommand:
-                        var (text, embed) = await HelpModule.ShowHelp(_services, context, _db, _commands, message.Content);
+                        var (text, embed) = await HelpModule.ShowHelp(
+                            _services, context, _db, _commands, message.Content);
                         await context.Channel.SendMessageAsync(text: text, embed: embed);
                         return;
 
                     default:
-                        await context.Channel.SendMessageAsync($"{MentionUtils.MentionUser(message.Author.Id)}, {result.ErrorReason}");
+                        await context.Channel.SendMessageAsync(
+                            $"{MentionUtils.MentionUser(message.Author.Id)}, {result.ErrorReason}");
                         break;
                 }
             }

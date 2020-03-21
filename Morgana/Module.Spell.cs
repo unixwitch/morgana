@@ -18,7 +18,6 @@ using Discord.WebSocket;
 using System.Linq;
 using System.Diagnostics;
 using CacheManager.Core;
-using EFSecondLevelCache.Core;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.IO;

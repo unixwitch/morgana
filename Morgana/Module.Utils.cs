@@ -18,12 +18,18 @@ using Discord.WebSocket;
 using System.Linq;
 using System.Diagnostics;
 using CacheManager.Core;
-using EFSecondLevelCache.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Caching.Memory;
+using EFCoreSecondLevelCacheInterceptor;
 
 namespace Morgana {
     public class UtilsModule : ModuleBase<SocketCommandContext> {
         public StorageContext DB { get; set; }
+        private readonly IServiceProvider _services;
+
+        public UtilsModule(IServiceProvider services) {
+            _services = services;
+        }
 
         [Command("status", RunMode = RunMode.Async)]
         [Summary("Show my status")]
@@ -35,21 +41,15 @@ namespace Morgana {
             var uptime = DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
             var suptime = uptime.ToString(@"d\+h\:mm\:ss");
 
-            var cache = EFStaticServiceProvider.Instance.GetRequiredService<ICacheManager<object>>();
-            var cachestats = new List<string>();
+            var cache = (MemoryCacheServiceProvider)_services.GetService(typeof(IEFCacheServiceProvider));
+            var hits = cache.CacheHits;
+            var misses = cache.CacheMisses;
+            int hitpct = 0;
+            if (hits + misses > 0)
+                hitpct = (int)Math.Round(((double)hits / (double)(hits + misses) * 100));
+            var cachestats = $"hit {hits}/{hits + misses}, {hitpct}%";
 
-            foreach (var ch in cache.CacheHandles) { 
-                var hits = ch.Stats.GetStatistic(CacheManager.Core.Internal.CacheStatsCounterType.Hits);
-                var misses = ch.Stats.GetStatistic(CacheManager.Core.Internal.CacheStatsCounterType.Misses);
-
-                int hitpct = 0;
-                if (hits + misses > 0)
-                    hitpct = (int) Math.Round(((double)hits / (double)(hits + misses) * 100));
-                cachestats.Add($"hit {hits}/{hits + misses}, {hitpct}%");
-            }
-
-            var scachestats = string.Join("; ", cachestats);
-            await ReplyAsync($"up {suptime}, host {user}@{hostname}, platform .NET Core {netversion} on {osvers}\ncache: {scachestats}");
+            await ReplyAsync($"up {suptime}, host {user}@{hostname}, platform .NET Core {netversion} on {osvers}\ncache: {cachestats}");
         }
 
         [Command("ping", RunMode = RunMode.Async)]

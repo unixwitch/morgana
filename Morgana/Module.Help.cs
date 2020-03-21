@@ -94,7 +94,7 @@ namespace Morgana {
                 try {
                     minfo = cmds.Modules.First(m => m.Name == bits[0]);
                 } catch (InvalidOperationException) {
-                    return ("{muser}, I don't recognise that command.", null);
+                    return ($"{muser}, I don't recognise that command.", null);
                 }
                 var matched = minfo.Name;
 
